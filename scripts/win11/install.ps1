@@ -8,6 +8,23 @@ function Test-CommandExists {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Test-IsElevated {
+    $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Test-PendingReboot {
+    $rebootKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
+    )
+    foreach ($key in $rebootKeys) {
+        if (Test-Path -LiteralPath $key) { return $true }
+    }
+    $sessionManager = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -ErrorAction SilentlyContinue
+    return [bool]($sessionManager -and $sessionManager.PendingFileRenameOperations)
+}
+
 function Install-Package {
     param(
         [string]$ScoopName,
@@ -24,6 +41,9 @@ function Install-Package {
         return
     }
     if ((Test-CommandExists "choco") -and $ChocoName) {
+        if (-not (Test-IsElevated)) {
+            Write-Warning "当前不是提升的 PowerShell；Chocolatey 多数包需要管理员权限，建议改用 winget / scoop，或以管理员身份重开终端后重试。"
+        }
         choco install $ChocoName -y
         return
     }
@@ -40,11 +60,15 @@ if (-not ($hasScoop -or $hasWinget -or $hasChoco)) {
 }
 Write-Host ("  scoop={0} winget={1} choco={2}" -f $hasScoop, $hasWinget, $hasChoco)
 
+if (Test-PendingReboot) {
+    Write-Warning "检测到系统有待重启请求。Chocolatey 默认会忽略它；建议先重启再安装，避免后续步骤异常。"
+}
+
 $plan = @(
     @{ Label = "rmux"; Scoop = "rmux"; Winget = "Helvesec.RMUX";         Choco = "rmux" },
     @{ Label = "eza";  Scoop = "eza";  Winget = "eza.eza";               Choco = "eza" },
     @{ Label = "glow"; Scoop = "glow"; Winget = "charmbracelet.glow";    Choco = "glow" },
-    @{ Label = "yazi"; Scoop = "yazi"; Winget = $null;                   Choco = "yazi" }
+    @{ Label = "yazi"; Scoop = "yazi"; Winget = "sxyazi.yazi";           Choco = "yazi" }
 )
 
 if ($hasScoop) {

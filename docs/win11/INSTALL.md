@@ -39,7 +39,7 @@ irm get.scoop.sh | iex
 | rmux | `scoop install rmux`（先加 bucket） | `winget install rmux` | `choco install rmux` | 原生 Windows，无需 WSL |
 | eza | `scoop install eza` | `winget install --id eza.eza` | `choco install eza` | |
 | glow | `scoop install glow` | `winget install --id charmbracelet.glow` | `choco install glow` | |
-| yazi | `scoop install yazi` | `winget search yazi` 后按 ID 安装 | `choco install yazi` | winget ID 可能变化，先 search |
+| yazi | `scoop install yazi` | `winget install --id sxyazi.yazi` | `choco install yazi` | winget ID 可能变化，先 search |
 
 一键安装（Scoop 路径，脚本会自动添加 rmux bucket）：
 
@@ -142,3 +142,21 @@ yazi --version
 - `yazi` 启动后按 `~` 查看帮助，确认图标正常（Nerd Font 生效）。
 - `glow README.md` 应以渲染后的 Markdown 输出。
 - PowerShell 中输入 `ll` 应显示带图标的长列表。
+
+## 7. 常见问题：Chocolatey 的 warning 不是安装失败
+
+如果看到类似下面的输出，注意 `0 error(s)` —— 这是 **warning**，Chocolatey 校验已通过，包可能已经装好：
+
+```text
+3 validations performed. 2 success(es), 1 warning(s), and 0 error(s).
+Validation Warnings:
+ - A pending system reboot request has been detected, however, this is being ignored...
+Chocolatey detected you are not running from an elevated command shell...
+```
+
+处理方式：
+
+1. 先确认到底装没装：重新打开终端，执行第 6 节的四条版本命令；或 `choco list --local-only` 查看已安装包。
+2. **待重启请求**：Chocolatey 默认忽略它，但后续安装可能异常。方便时重启 Windows，再重跑 `.\scripts\win11\install.ps1` 做一次幂等安装。若希望遇到待重启就中止，可执行 `choco feature enable --name="exitOnRebootDetected"`，或在命令后加 `--exit-when-reboot-detected`。
+3. **非管理员 shell**：多数 Chocolatey 包需要管理员权限。最省事的替代是改用 winget（Win11 自带）或 Scoop；脚本会优先用它们。确实要用 Chocolatey，就“以管理员身份运行”PowerShell 后重试。
+4. 只能在非管理员环境使用时，Chocolatey 官方要求安装到非默认目录，例如安装阶段设置 `$env:ChocolateyInstall='C:\ProgramData\chocoportable'`；且通常只能装 `*.portable` 包。参考 <https://docs.chocolatey.org/en-us/choco/setup#non-administrative-install>。
