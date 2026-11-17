@@ -1,0 +1,45 @@
+# yazi - private keymap
+# 适用平台: 全平台通用（平台差异在条目内用 for 字段声明）
+# 使用 prepend_keymap 追加自定义键位，保留全部默认键位
+# 注意: TOML 中 on/run/desc 为固定字段，run 可传数组执行多个 action
+
+[[mgr.prepend_keymap]]
+on = ["g", "h"]
+run = "cd ~"
+desc = "Go to home"
+
+[[mgr.prepend_keymap]]
+on = ["g", "d"]
+run = "cd ~/Downloads"
+desc = "Go to Downloads"
+for = "unix"
+
+[[mgr.prepend_keymap]]
+on = ["g", "d"]
+run = "cd %USERPROFILE%\\Downloads"
+desc = "Go to Downloads"
+for = "windows"
+
+[[mgr.prepend_keymap]]
+on = ["g", "c"]
+run = "cd ~/.config"
+desc = "Go to XDG config"
+for = "unix"
+
+[[mgr.prepend_keymap]]
+on = ["g", "c"]
+run = "cd %USERPROFILE%\\anywhere"
+desc = "Go to config repo"
+for = "windows"
+
+[[mgr.prepend_keymap]]
+on = ["g", "v"]
+run = 'shell -- $EDITOR %s'
+desc = "Edit with $EDITOR"
+for = "unix"
+
+[[mgr.prepend_keymap]]
+on = ["g", "v"]
+run = "shell -- code %s"
+desc = "Edit with VS Code"
+for = "windows"

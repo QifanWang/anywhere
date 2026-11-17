@@ -1,0 +1,37 @@
+# yazi - private theme
+# 适用平台: 全平台通用
+# Catppuccin Mocha 风格覆盖；未定义的字段使用内置主题
+# 位置: ~/.config/yazi/theme.toml 或 %APPDATA%\yazi\config\theme.toml
+
+[app]
+overall = { bg = "#1e1e2e" }
+
+[mgr]
+cwd = { fg = "#89b4fa", bold = true }
+find_keyword = { fg = "#f9e2af", bg = "#181825" }
+border_symbol = "│"
+border_style = { fg = "#585b70" }
+
+[indicator]
+parent = { fg = "#6c7086" }
+current = { fg = "#a6e3a1", bold = true }
+preview = { fg = "#f9e2af" }
+padding = { open = "▐", close = "▌" }
+
+[tabs]
+active = { fg = "#1e1e2e", bg = "#a6e3a1", bold = true }
+inactive = { fg = "#a6adc8" }
+sep_inner = { open = "[", close = "]" }
+sep_outer = { open = "", close = "" }
+
+[status]
+overall = { fg = "#cdd6f4", bg = "#181825" }
+perm_exec = { fg = "#a6e3a1", bold = true }
+progress_error = { fg = "#f38ba8", reversed = true }
+
+[filetype]
+rules = [
+  { mime = "image/*", fg = "#f9e2af" },
+  { mime = "{audio,video}/*", fg = "#cba6f7" },
+  { url = "*/", fg = "#89b4fa" },
+]
