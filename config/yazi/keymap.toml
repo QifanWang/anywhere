@@ -2,44 +2,71 @@
 # 适用平台: 全平台通用（平台差异在条目内用 for 字段声明）
 # 使用 prepend_keymap 追加自定义键位，保留全部默认键位
 # 注意: TOML 中 on/run/desc 为固定字段，run 可传数组执行多个 action
+# 实测版本: yazi 26.9.1（linux-fedora；fd 10.2.0 / lazygit 0.66.3 / vcs-files.yazi 已装）
+#
+# linux-fedora 实测增强（均标 for = "unix"，依赖见各条目）：
+# 1. gf 平铺视图：yazi 26.9.1 无内嵌目录树形展开命令。官方 workaround：
+#    用 fd 引擎做「平铺视图」——把当前目录下最多 N 层的文件全部平铺进列表
+#    （无树形缩进线，但可见深层文件）。依赖 fd（musl 静态包）。
+#    交互：gf 进入平铺视图；h/l 或 Esc 可离开；输入框中 C-c 取消。
+# 2. gi lazygit：yazi 无内置 git 面板，用 shell --block 拉起 lazygit（Go 静态包）。
+#    --block = yazi 退到二级屏幕，lazygit 在 yazi 当前目录运行，q 退出后回到 yazi。
+#    暂存/取消暂存/提交/diff/stash/rebase 都在 lazygit 里做，对标 VSCode Git 插件。
+# 3. gv 变更文件列表：vcs-files.yazi 插件（plugins/ 已入库），cd 到虚拟 vcs:// 视图，
+#    列出 git diff HEAD + untracked 的文件（只读浏览）。
+#    需要搭配列表 git 角标（init.lua + yazi.toml fetchers + theme.toml [git] 段）一起用。
+#    注意：gv 原为「用 $EDITOR 编辑选中文件」，被本条覆盖；编辑用 o（hx）或 O 菜单。
+# 4. z 模糊搜索：26.9.1 默认键位已绑定内置 fzf 插件，装上 fzf 二进制即生效。
+#    候选源由 FZF_DEFAULT_COMMAND 控制（config/shell/env.sh 已设为 fd）。
+#    f = filter --smart（当前目录内子串过滤）；s = search --via=fd（精确）。
+
+# --- 导航快捷键（全平台）---
 
 [[mgr.prepend_keymap]]
-on = ["g", "h"]
-run = "cd ~"
+on   = [ "g", "h" ]
+run  = "cd ~"
 desc = "Go to home"
 
 [[mgr.prepend_keymap]]
-on = ["g", "d"]
-run = "cd ~/Downloads"
+on   = [ "g", "d" ]
+run  = "cd ~/Downloads"
 desc = "Go to Downloads"
-for = "unix"
+for  = "unix"
 
 [[mgr.prepend_keymap]]
-on = ["g", "d"]
-run = "cd %USERPROFILE%\\Downloads"
+on   = [ "g", "d" ]
+run  = "cd %USERPROFILE%\\Downloads"
 desc = "Go to Downloads"
-for = "windows"
+for  = "windows"
 
 [[mgr.prepend_keymap]]
-on = ["g", "c"]
-run = "cd ~/.config"
+on   = [ "g", "c" ]
+run  = "cd ~/.config"
 desc = "Go to XDG config"
-for = "unix"
+for  = "unix"
 
 [[mgr.prepend_keymap]]
-on = ["g", "c"]
-run = "cd %USERPROFILE%\\anywhere"
+on   = [ "g", "c" ]
+run  = "cd %USERPROFILE%\\anywhere"
 desc = "Go to config repo"
-for = "windows"
+for  = "windows"
+
+# --- 工作流增强（unix 实测；依赖 fd / lazygit / vcs-files.yazi）---
 
 [[mgr.prepend_keymap]]
-on = ["g", "v"]
-run = 'shell -- $EDITOR %s'
-desc = "Edit with $EDITOR"
-for = "unix"
+on   = [ "g", "f" ]
+run  = 'search_do --via=fd --args="-d 3"'
+desc = "Flat view（平铺展开，最多 3 层）"
+for  = "unix"
 
 [[mgr.prepend_keymap]]
-on = ["g", "v"]
-run = "shell -- code %s"
-desc = "Edit with VS Code"
-for = "windows"
+on   = [ "g", "i" ]
+run  = "shell --block lazygit"
+desc = "lazygit（暂存区 / 提交 / diff / stash）"
+for  = "unix"
+
+[[mgr.prepend_keymap]]
+on   = [ "g", "v" ]
+run  = "plugin vcs-files"
+desc = "列出 Git 变更文件（vcs:// 虚拟视图）"
+for  = "unix"

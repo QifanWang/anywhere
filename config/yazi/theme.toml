@@ -1,7 +1,16 @@
 # yazi - private theme
 # 适用平台: 全平台通用
-# Catppuccin Mocha 风格覆盖；未定义的字段使用内置主题
 # 位置: ~/.config/yazi/theme.toml 或 %APPDATA%\yazi\config\theme.toml
+# 结构说明：
+#   [app] ~ [filetype]  Catppuccin Mocha 风格外观覆盖（未定义的字段使用内置主题）
+#   [git] / [icon]      linux-fedora 实测段（gruvbox 系色值，与 Catppuccin 略有色差）
+#     - [git] 角标改用 ASCII 字母（对标 VSCode 状态字母），零字体依赖；
+#       插件默认角标是 Nerd Font Octicons 私有区字形，无字体终端显示豆腐块
+#     - [icon] 图标为 Nerd Font 私有区字形，本地终端字体必须是 Nerd Font，
+#       否则显示豆腐块/乱码；不支持时把 text 换成 emoji（📁 📄 等）或整段删除
+# 测试终端支持：printf '\uf07b \ue73e \ue73c\n'  应显示 文件夹/markdown/python 图标
+# 匹配优先级（官方）：globs > dirs > files > exts > conds；同类别内 prepend 优先
+# 语法见 https://yazi-rs.github.io/docs/configuration/theme
 
 [app]
 overall = { bg = "#1e1e2e" }
@@ -34,4 +43,82 @@ rules = [
   { mime = "image/*", fg = "#f9e2af" },
   { mime = "{audio,video}/*", fg = "#cba6f7" },
   { url = "*/", fg = "#89b4fa" },
+]
+
+# --- linux-fedora 实测段 ---
+
+[git]
+# git.yazi 插件（linemode 角标，显示在文件名右侧）。
+# 字段名来自插件源码 th.git.*；hovered 行不着色是插件行为（保持行高亮可读）。
+unknown_sign   = ""                        # 状态未定不显示
+ignored_sign   = ""                        # 忽略文件不显示，保持列表干净
+untracked_sign = "? "
+unstaged_sign  = "M "                      # 已修改未暂存
+staged_sign    = "M "                      # 已暂存（与 unstaged 靠颜色区分）
+added_sign     = "A "                      # 新增已暂存
+deleted_sign   = "D "
+updated_sign   = "! "                      # 冲突/未合并
+unknown   = { fg = "#665c54" }             # 状态未定（非 git 目录）
+ignored   = { fg = "#665c54" }             # 已忽略
+untracked = { fg = "#e78a4e" }             # 未跟踪
+unstaged  = { fg = "#e78a4e", bold = true } # 已修改未暂存
+staged    = { fg = "#d3869b" }             # 已暂存
+added     = { fg = "#a9b665" }             # 新增已暂存
+deleted   = { fg = "#ea6962", bold = true } # 已删除
+updated   = { fg = "#7daea3" }             # 冲突/双改
+clean     = { fg = "#a9b665" }             # 干净
+
+[icon]
+# --- 兜底（conds，优先级最低但覆盖一切）---
+prepend_conds = [
+  { if = "dir",           text = "", fg = "#7daea3" },  # nf-fa-folder
+  { if = "exec",          text = "", fg = "#d3869b" },  # nf-fa-cog  可执行
+  { if = "hidden & dir",  text = "", fg = "#665c54" },  # 隐藏目录
+  { if = "hidden",        text = "", fg = "#665c54" },  # 隐藏文件
+  { if = "!dir",          text = "", fg = "#a9b665" },  # nf-fa-file-text 普通文件
+]
+
+# --- 目录名 ---
+prepend_dirs = [
+  { name = ".git",         text = "", fg = "#e78a4e" },  # GitHub
+  { name = ".config",      text = "", fg = "#7daea3" },  # gear
+  { name = "node_modules", text = "", fg = "#a9b665" },  # nf-dev-nodejs_small
+]
+
+# --- 文件名 ---
+prepend_files = [
+  { name = "Makefile",     text = "", fg = "#d3869b" },
+  { name = "Dockerfile",   text = "", fg = "#7daea3" },
+  { name = ".bashrc",      text = "", fg = "#a9b665" },
+  { name = ".tmux.conf",   text = "", fg = "#a9b665" },
+]
+
+# --- 扩展名 ---
+prepend_exts = [
+  { name = "md",      text = "", fg = "#7daea3" },  # markdown
+  { name = "markdown", text = "", fg = "#7daea3" },
+  { name = "py",      text = "", fg = "#e78a4e" },  # python
+  { name = "rs",      text = "", fg = "#d3869b" },  # rust
+  { name = "go",      text = "", fg = "#89b482" },  # go
+  { name = "lua",     text = "", fg = "#89b482" },
+  { name = "js",      text = "", fg = "#e7c787" },
+  { name = "ts",      text = "", fg = "#89b482" },
+  { name = "sh",      text = "", fg = "#a9b665" },  # terminal
+  { name = "json",    text = "", fg = "#e7c787" },
+  { name = "yaml",    text = "", fg = "#e7c787" },
+  { name = "yml",     text = "", fg = "#e7c787" },
+  { name = "toml",    text = "", fg = "#a9b665" },
+  { name = "conf",    text = "", fg = "#a9b665" },
+  { name = "log",     text = "", fg = "#665c54" },
+  { name = "png",     text = "", fg = "#d3869b" },  # image
+  { name = "jpg",     text = "", fg = "#d3869b" },
+  { name = "jpeg",    text = "", fg = "#d3869b" },
+  { name = "gif",     text = "", fg = "#d3869b" },
+  { name = "svg",     text = "", fg = "#d3869b" },
+  { name = "zip",     text = "", fg = "#e78a4e" },  # archive
+  { name = "tgz",     text = "", fg = "#e78a4e" },
+  { name = "gz",      text = "", fg = "#e78a4e" },
+  { name = "html",    text = "", fg = "#e78a4e" },
+  { name = "css",     text = "", fg = "#7daea3" },
+  { name = "pdf",     text = "", fg = "#d3869b" },
 ]

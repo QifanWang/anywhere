@@ -31,24 +31,25 @@
 | `C-b n` / `C-b p` | 下一个 / 上一个窗口 |
 | `C-b 0`..`9` | 跳到指定编号窗口 |
 | `C-b w` | 窗口列表 |
-| `C-b \|` | 左右分屏（保持当前路径） |
-| `C-b -` | 上下分屏（保持当前路径） |
-| `C-b h/j/k/l` | 在面板间移动 |
-| `C-b H/J/K/L` | 调整面板大小（可连按） |
+| `C-b %` | 左右分屏（保持当前路径） |
+| `C-b "` | 上下分屏（保持当前路径） |
+| `C-b 方向键` | 在面板间移动 |
 | `C-b z` | 最大化/还原当前面板 |
 | `C-b x` | 关闭当前面板 |
 | `C-b q` | 显示面板编号 |
-| `C-b r` | 重载配置文件 |
 | `C-b ?` | 查看全部快捷键 |
 
-### 复制模式（vi 风格）
+> 本仓库 tmux 配置为极简风格（linux-fedora 实测）：未绑定 `|` / `-` 分屏与 hjkl 移动，使用 tmux 默认键位；未绑定重载键，改配置后执行 `tmux source-file ~/.tmux.conf`。
+
+### 复制模式（emacs 风格，tmux 默认）
 
 | 按键 | 作用 |
 | --- | --- |
 | `C-b [` | 进入复制模式 |
-| `h/j/k/l` | 移动光标 |
-| `v` | 开始选择 |
-| `y` | 复制选中内容 |
+| 方向键 | 移动光标 |
+| `C-s` / `C-r` | 向下 / 向上搜索 |
+| `C-space` | 开始选择 |
+| `Alt-w` | 复制选中内容 |
 | `C-b ]` | 粘贴 |
 | `q` / `Esc` | 退出复制模式 |
 
@@ -61,10 +62,10 @@
 | 别名 | 等价命令 |
 | --- | --- |
 | `ls` | `eza --color=always --icons --group-directories-first` |
-| `ll` | `eza -lah --color=always --icons --group-directories-first --git` |
+| `ll` | `eza -la --git --header`（linux-fedora 实测，无 `--icons`） |
 | `la` | `eza -a --color=always --icons --group-directories-first` |
-| `lt` | `eza --tree --level=2 --color=always --icons` |
-| `lg` | `eza -lah --color=always --icons --group-directories-first --git` |
+| `lt` | `eza --tree --level=2 --git-ignore`（linux-fedora 实测） |
+| `lg` | `eza -la --git --header --sort=modified`（linux-fedora 实测） |
 | `lss` | `eza -l --color=always --icons --time-style=long-iso` |
 
 常用参数：
@@ -194,7 +195,29 @@ git log --oneline | glow -
 
 | 按键 | 作用 |
 | --- | --- |
-| `g d` | 跳转到下载目录（Windows 为 `%USERPROFILE%\Downloads`，Unix 为 `~/Downloads`） |
 | `g h` | 跳转到家目录 |
+| `g d` | 跳转到下载目录（Windows 为 `%USERPROFILE%\Downloads`，Unix 为 `~/Downloads`） |
 | `g c` | 跳转到配置目录（Windows 为 `%USERPROFILE%\anywhere`，Unix 为 `~/.config`） |
-| `g v` | 用 `$EDITOR` / VS Code 打开选中文件 |
+| `g f` | 平铺展开视图（fd 引擎，最多 3 层；依赖 fd，Unix） |
+| `g i` | 拉起 lazygit（暂存 / 提交 / diff / stash；依赖 lazygit，Unix） |
+| `g v` | 列出 Git 变更文件（vcs-files.yazi 插件的 `vcs://` 虚拟视图，Unix） |
+| `z` | 模糊搜索（内置 fzf 插件，候选源为 fd；依赖 fzf 二进制） |
+
+> markdown 文件预览由 glow 插件渲染（目录由 eza 插件树状预览）；`o` 用 glow 精读，`O` 交互选择 glow / hx / edit。shell 侧另有 `y`（退出 yazi 后 cd 到浏览目录）、`yg`（选文件后 glow 精读）、`gw`（按 pane 宽度渲染）三个 wrapper，见 `config/shell/env.sh`。
+
+---
+
+## helix（hx）
+
+| 按键 | 作用 |
+| --- | --- |
+| `i` / `Esc` | 进入 / 退出插入模式 |
+| `w` / `e` / `b` | 按 word 向后 / 向词尾 / 向前移动 |
+| `x` / `d` | 删字符 / 删选择（选区朝向自动） |
+| `v` / `V` | 进入字符 / 行选择 |
+| `y` / `p` | 复制（同步系统剪贴板）/ 粘贴选择 |
+| `u` / `U` | 撤销 / 重做 |
+| `:w` / `:q` | 保存 / 退出（`wq` 保存退出） |
+| `space f` / `space s` | 文件选择器 / 全工程符号搜索 |
+
+> 剪贴板方案（ssh 远程）：yank 时发 OSC 52（由本地终端写入本机剪贴板）+ 写 tmux buffer；paste 读 tmux buffer。详见 `config/helix/config.toml` 注释。

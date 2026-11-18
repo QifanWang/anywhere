@@ -1,0 +1,70 @@
+# anywhere / helix 25.07.1 private config
+# 适用平台: linux-fedora 实测（源码编译规避 glibc 2.28 限制，见 docs/linux-fedora/INSTALL.md）；
+#           macOS / 新版 Linux 可用官方包，配置通用
+# 位置: ~/.config/helix/config.toml
+#
+# helix 无配置也能跑；此文件只做最小定制：gruvbox 主题（与 yazi 图标配色同风格）、
+# 相对行号、插入模式竖线光标。LSP（TypeScript/Python/Go/Rust 等）内置自动启用，
+# 打开对应文件时若无对应 language server 会在日志提示缺失，按需安装。
+# 官方文档：https://docs.helix-editor.com/configuration.html
+#
+# 模态编辑速记（详见 cheat-sheet.md）：
+#   i / Esc     进入 / 退出插入模式
+#   w / e / b   按 word 移动
+#   x / d       删字符 / 删选择（选区朝向自动）
+#   v / V       进入字符 / 行选择
+#   y / p       复制（同步系统剪贴板）/ 粘贴选择
+#   u / U       撤销 / 重做
+#   :w / :q     保存 / 退出（wq 保存退出）
+#   space f / space s  文件选择器 / 全工程符号搜索
+
+theme = "gruvbox"
+
+[editor]
+line-number = "relative"
+true-color = true
+# 鼠标选择即进入 select 模式，贴合“选中某一段复制粘贴”的诉求
+mouse = true
+# 系统剪贴板方案（ssh 远程场景）：
+# - 服务器无图形会话，helix 自动检测到 "tmux" provider，但本机 tmux 仅 2.7，
+#   不支持 helix 所用的 `tmux load-buffer -w`，导致 yank 从未真正写进剪贴板
+#   （这就是 yank 后外部粘贴得到旧内容的根因）。
+# - 改用自定义 provider：yank 时同时 1) 发 OSC 52 转义序列（经 ssh 由本地终端
+#   写入本地系统剪贴板，需终端支持 OSC 52）2) 写入 tmux buffer；paste 时读 tmux buffer。
+#   在 tmux 内（set-clipboard external）OSC 52 会被透传到本地终端。
+[editor.clipboard-provider.custom]
+# 注意两个键的语义与直觉相反（官方示例 yank=cat / paste=tee）：
+#   yank  = hx 读剪贴板时执行（stdout 作为剪贴板内容）→ 读 tmux buffer
+#   paste = hx 写剪贴板时执行（内容经 stdin 传入）→ 发 OSC 52 + 写 tmux buffer
+yank = { command = "tmux", args = ["show-buffer"] }
+paste = { command = "sh", args = ["-c", 'c=$(cat); [ -n "$TMUX" ] && printf %s "$c" | tmux load-buffer -; printf "\033]52;c;%s\033\\" "$(printf %s "$c" | base64 -w 0)" > /dev/tty 2>/dev/null; true'] }
+
+[editor.cursor-shape]
+insert = "bar"
+normal = "block"
+select = "underline"
+
+[editor.statusline]
+left = ["mode", "spinner", "file-name", "file-modification-indicator"]
+right = ["diagnostics", "selections", "position", "file-encoding", "file-type"]
+
+[keys.normal]
+# y/Y 复制到系统剪贴板（OSC 52 → 本地终端 + tmux buffer）；p/P 从系统剪贴板粘贴。
+# 注：yank_to_clipboard 只写剪贴板、不写内部 " 寄存器，故 p/P 一并改为剪贴板粘贴；
+# 实测 paste_clipboard_* 不尊重 " 寄存器前缀（""p 也走剪贴板），因此删除类操作
+# （d/x/c 等仍写入内部 " 寄存器）后想粘贴所删内容，用 A-p / A-P（内部寄存器粘贴）。
+y = "yank_to_clipboard"
+Y = "yank_joined_to_clipboard"
+p = "paste_clipboard_after"
+P = "paste_clipboard_before"
+"A-p" = "paste_after"
+"A-P" = "paste_before"
+
+[keys.select]
+# 鼠标拖选进入 select 模式（select 有独立按键表，需单独重映射）
+y = "yank_to_clipboard"
+Y = "yank_joined_to_clipboard"
+p = "paste_clipboard_after"
+P = "paste_clipboard_before"
+"A-p" = "paste_after"
+"A-P" = "paste_before"
