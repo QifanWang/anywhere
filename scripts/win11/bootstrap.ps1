@@ -192,10 +192,14 @@ foreach ($item in $linkMap) {
 Write-Host "`n==> Checking PATH"
 Refresh-ProcessPath
 $tools = @(
-    @{ Name = "rmux"; WingetId = "Helvesec.RMUX" },
-    @{ Name = "eza";  WingetId = "eza-community.eza" },
-    @{ Name = "glow"; WingetId = "charmbracelet.glow" },
-    @{ Name = "yazi"; WingetId = "sxyazi.yazi" }
+    @{ Name = "rmux";    WingetId = "Helvesec.RMUX" },
+    @{ Name = "eza";     WingetId = "eza-community.eza" },
+    @{ Name = "glow";    WingetId = "charmbracelet.glow" },
+    @{ Name = "yazi";    WingetId = "sxyazi.yazi" },
+    @{ Name = "hx";      WingetId = "Helix.Helix" },
+    @{ Name = "fd";      WingetId = "sharkdp.fd" },
+    @{ Name = "fzf";     WingetId = "junegunn.fzf" },
+    @{ Name = "lazygit"; WingetId = "JesseDuffield.lazygit" }
 )
 foreach ($tool in $tools) {
     Assert-ToolPath -Name $tool.Name -WingetId $tool.WingetId
@@ -204,5 +208,5 @@ foreach ($tool in $tools) {
 Write-Host "`n==> 接下来（只需一次）"
 Write-Host "  在 PowerShell 配置文件（`$PROFILE）中加入:"
 Write-Host ("    . '{0}'" -f (Join-Path $configHome "eza\aliases.ps1").Replace("'", "''"))
-Write-Host "  验证: rmux -V ; rmux list-keys -N ; eza --version ; glow --version ; yazi --version"
+Write-Host "  验证: 重开终端后运行 .\\scripts\\win11\\verify.ps1"
 Write-Host "`n完成。"

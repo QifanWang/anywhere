@@ -1,49 +1,19 @@
-# 跨平台工具链对照（唯一数据源）
-# 平台文档 docs/*-toolchain.md 的 §3 只写本平台清单与本地注意事项，并链接到本文件。
+# 跨平台「工具与功能」清单对照
 version: 1
 
 platforms:
   win11:
-    os: Windows 10 / 11
-    shell: PowerShell 7 (推荐) 或 5.1
-    constraints:
-      - winget 需要大陆镜像
-      - 终端复用走原生 ConPTY，不依赖 WSL / MSYS2
-    package_manager:
-      name: winget
-      mirror: https://mirrors.cernet.edu.cn/winget-source
-      install_script: scripts/win11/install.ps1
-      upgrade: winget install 自动检查；0x8A15002B 表示已最新
-    terminal:
-      multiplexer: RMUX
-      font: Nerd Font（手动安装）
-      history: 当前不配置
-      smart_prompt: 当前不配置
-      path: bootstrap.ps1 刷新会话 PATH，缺失时写入用户 PATH
     tools:
-      rmux:   { role: 终端复用, version: 0.10.0, config: config/rmux/rmux.conf }
-      eza:    { role: 目录列表, version: 0.23.5, config: config/eza/aliases.ps1 }
-      glow:   { role: Markdown 阅读与预览, version: 3.0.0, config: config/glow/glow.yml }
-      yazi:   { role: 文件管理与预览, version: 26.9.1, config: config/yazi/ }
-    not_installed: [helix, fd, fzf, lazygit]
+      rmux:    { role: 终端复用, version: 0.10.0, config: config/rmux/rmux.conf }
+      eza:     { role: 目录列表, version: 0.23.5, config: config/eza/aliases.ps1 }
+      glow:    { role: Markdown 阅读与预览, version: 3.0.0, config: config/glow/glow.yml }
+      yazi:    { role: 文件管理与预览, version: 26.9.1, config: config/yazi/ }
+      helix:   { role: 模态编辑器, version: 25.07.1, config: config/helix/config.toml }
+      fd:      { role: 文件查找, version: 10.2.0, config: null }
+      fzf:     { role: 模糊搜索, version: 0.75.0, config: null }
+      lazygit: { role: Git 面板, version: 0.66.3, config: null }
 
   linux-fedora:
-    os: TencentOS Server 3.3 / RHEL 系（无 GUI）
-    shell: bash / zsh
-    constraints:
-      - glibc 2.28
-      - 无 root，dnf 不可用
-    package_manager:
-      name: none
-      strategy: 全部用户级安装到 ~/.local/bin
-      install_script: scripts/linux-fedora/install.sh
-      note: helix 需源码编译，install.sh 不自动执行
-    terminal:
-      multiplexer: tmux 2.7（系统自带）
-      font: Nerd Font（由 ssh 客户端配置）
-      history: 当前不配置
-      smart_prompt: 当前不配置
-      path: config/shell/env.sh 将 ~/.local/bin 前置为第一项
     tools:
       tmux:    { role: 终端复用, version: 2.7, config: config/tmux/tmux.conf }
       yazi:    { role: 文件管理与预览, version: 26.9.1, config: config/yazi/ }
@@ -67,22 +37,26 @@ functions:
     win11: yazi
     linux: yazi
     note: g d / g c 路径按平台分支；g f / g i / g v 仅 Unix
-  - role: 文件查找与模糊搜索
-    win11: 未安装
-    linux: fd + fzf
-    note: win11 需自行补装 fzf 才能用 yazi 的 z 键
+  - role: 文件查找
+    win11: fd
+    linux: fd
+    note: 无配置文件
+  - role: 模糊搜索
+    win11: fzf
+    linux: fzf
+    note: win11 无环境变量配置；yazi 的 z 键依赖 fzf 二进制
   - role: Git 面板
-    win11: 未安装
+    win11: lazygit
     linux: lazygit
-    note: yazi 的 gi 键依赖 lazygit
+    note: yazi 的 gi 键为 Unix 专用，win11 下不显示
   - role: Markdown 阅读与预览
     win11: glow
     linux: glow
     note: 非 TTY 用 glow - < file；预览需 --color=always
   - role: 模态编辑
-    win11: 未安装
+    win11: helix
     linux: helix
-    note: win11 的 bootstrap 只链接 config/helix，不安装 hx
+    note: 命令为 hx；两平台共用 config/helix/config.toml
   - role: Shell wrapper
     win11: 未配置
     linux: y / yg / gw
