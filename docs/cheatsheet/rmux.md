@@ -2,7 +2,7 @@
 
 win11 使用 **RMUX**，不使用 tmux。RMUX 是原生 Windows 终端复用器，CLI 与配置语法兼容 tmux。完整命令可用 `rmux list-commands` 查看，本文只列常用项。
 
-配置源文件：`../../config/rmux/rmux.conf`。安装与配置链接见 `INSTALL.md`。
+配置源文件：`../../config/rmux/rmux.conf`。安装与配置链接见 `../win11-toolchain.md`。
 
 ## CLI
 

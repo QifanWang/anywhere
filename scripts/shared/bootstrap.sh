@@ -48,7 +48,7 @@ link_dir "$REPO/config/yazi" "$CONFIG_HOME/yazi"
 link_dir "$REPO/config/helix" "$CONFIG_HOME/helix"
 
 # tmux：3.1+ 支持 XDG 路径 ~/.config/tmux/tmux.conf；老版本（含 2.7）
-# 只认 ~/.tmux.conf，改为单文件链接（实测 tmux 2.7 / TencentOS，见 docs/linux-fedora/INSTALL.md）
+# 只认 ~/.tmux.conf，改为单文件链接（实测 tmux 2.7 / TencentOS，见 docs/linux-fedora-toolchain.md）
 if command -v tmux >/dev/null 2>&1; then
   tmux_major="$(tmux -V 2>/dev/null | awk '{print $2}' | cut -d. -f1)"
   if [ "${tmux_major:-0}" -ge 3 ]; then

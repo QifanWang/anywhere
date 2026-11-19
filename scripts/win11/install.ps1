@@ -3,6 +3,19 @@ param([switch]$Yes)
 
 $ErrorActionPreference = "Stop"
 
+# winget 0x8A15002B：已安装且没有可用升级，在 PowerShell 中表现为 -1978335189
+$Script:WingetNoUpgradeExitCode = -1978335189
+
+$Script:WingetMirrorUrl = "https://mirrors.cernet.edu.cn/winget-source"
+$Script:WingetMirrorHosts = @(
+    "mirrors.cernet.edu.cn",
+    "mirrors.ustc.edu.cn",
+    "mirrors.tuna.tsinghua.edu.cn",
+    "mirror.nju.edu.cn",
+    "mirrors.zju.edu.cn",
+    "mirrors.xjtu.edu.cn"
+)
+
 function Test-CommandExists {
     param([string]$Name)
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
@@ -13,71 +26,89 @@ function Test-IsElevated {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-function Test-PendingReboot {
-    $rebootKeys = @(
-        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
-        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
-    )
-    foreach ($key in $rebootKeys) {
-        if (Test-Path -LiteralPath $key) { return $true }
+function Get-WingetSourceUrl {
+    $detail = (& winget source list -n winget 2>$null) -join "`n"
+    if ($detail -match '(?im)^\s*\S+\s+(https?://\S+)') {
+        return $Matches[1]
     }
-    $sessionManager = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -ErrorAction SilentlyContinue
-    return [bool]($sessionManager -and $sessionManager.PendingFileRenameOperations)
+    return $null
+}
+
+function Test-IsMainlandWingetMirror {
+    param([string]$Url)
+    if (-not $Url) { return $false }
+    foreach ($hostName in $Script:WingetMirrorHosts) {
+        if ($Url.Contains($hostName)) { return $true }
+    }
+    return $false
+}
+
+function Ensure-WingetMirror {
+    $current = Get-WingetSourceUrl
+    if (Test-IsMainlandWingetMirror $current) {
+        Write-Host ("  winget 源已使用大陆镜像: {0}" -f $current)
+        return
+    }
+
+    $reason = if ($current) { "当前源为 $current" } else { "未找到名为 winget 的源" }
+    if (-not (Test-IsElevated)) {
+        throw ("{0}，不是大陆镜像。修改 winget 源需要管理员权限；请以管理员身份运行 PowerShell 后重试，或手动执行: winget source remove winget; winget source add winget {1} --trust-level trusted; winget source update" -f $reason, $Script:WingetMirrorUrl)
+    }
+
+    Write-Host ("==> 配置 winget 大陆镜像源: {0}" -f $Script:WingetMirrorUrl)
+    if ($current) {
+        & winget source remove winget | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "移除旧 winget 源失败（退出码 $LASTEXITCODE）。" }
+    }
+    & winget source add winget $Script:WingetMirrorUrl --trust-level trusted --accept-source-agreements
+    if ($LASTEXITCODE -ne 0) { throw "添加 winget 镜像源失败（退出码 $LASTEXITCODE）。" }
+    & winget source update
+    if ($LASTEXITCODE -ne 0) { Write-Warning "winget 源更新失败，安装时会自动重试。" }
+}
+
+function Test-WingetPackageInstalled {
+    param([string]$WingetId)
+    $listed = (& winget list --id $WingetId -e --disable-interactivity 2>$null) -join "`n"
+    return ($listed -match [regex]::Escape($WingetId))
 }
 
 function Install-Package {
     param(
-        [string]$ScoopName,
-        [string]$WingetId,
-        [string]$ChocoName
+        [string]$Label,
+        [string]$WingetId
     )
 
-    if (Test-CommandExists "scoop") {
-        scoop install $ScoopName
+    if (Test-WingetPackageInstalled -WingetId $WingetId) {
+        Write-Host "  已安装，检查是否有可用升级"
+    } else {
+        Write-Host "  未安装，执行安装"
+    }
+
+    # winget install 对已安装包会自动尝试升级；无升级时返回 0x8A15002B，应视为成功。
+    & winget install --id $WingetId -e --accept-source-agreements --accept-package-agreements --disable-interactivity
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -eq $Script:WingetNoUpgradeExitCode) {
+        Write-Host "  已是最新版本，无需升级"
         return
     }
-    if ((Test-CommandExists "winget") -and $WingetId) {
-        winget install --id $WingetId -e --accept-source-agreements --accept-package-agreements
-        return
+    if ($exitCode -ne 0) {
+        throw ("安装/升级 {0} 失败（winget 退出码 {1}）。" -f $Label, $exitCode)
     }
-    if ((Test-CommandExists "choco") -and $ChocoName) {
-        if (-not (Test-IsElevated)) {
-            Write-Warning "当前不是提升的 PowerShell；Chocolatey 多数包需要管理员权限，建议改用 winget / scoop，或以管理员身份重开终端后重试。"
-        }
-        choco install $ChocoName -y
-        return
-    }
-    Write-Warning "No matching package manager for $ScoopName; skipped."
 }
 
-Write-Host "==> Checking package managers"
-$hasScoop  = Test-CommandExists "scoop"
-$hasWinget = Test-CommandExists "winget"
-$hasChoco  = Test-CommandExists "choco"
-
-if (-not ($hasScoop -or $hasWinget -or $hasChoco)) {
-    throw "未找到 scoop / winget / choco。请先安装其中一个包管理器，详见 docs/win11/INSTALL.md。"
+Write-Host "==> Checking package manager"
+if (-not (Test-CommandExists "winget")) {
+    throw "未找到 winget。请先安装 Microsoft App Installer，详见 docs/win11-toolchain.md。"
 }
-Write-Host ("  scoop={0} winget={1} choco={2}" -f $hasScoop, $hasWinget, $hasChoco)
-
-if (Test-PendingReboot) {
-    Write-Warning "检测到系统有待重启请求。Chocolatey 默认会忽略它；建议先重启再安装，避免后续步骤异常。"
-}
+Write-Host ("  winget {0}" -f ((& winget --version) -join " "))
+Ensure-WingetMirror
 
 $plan = @(
-    @{ Label = "rmux"; Scoop = "rmux"; Winget = "Helvesec.RMUX";         Choco = "rmux" },
-    @{ Label = "eza";  Scoop = "eza";  Winget = "eza.eza";               Choco = "eza" },
-    @{ Label = "glow"; Scoop = "glow"; Winget = "charmbracelet.glow";    Choco = "glow" },
-    @{ Label = "yazi"; Scoop = "yazi"; Winget = "sxyazi.yazi";           Choco = "yazi" }
+    @{ Label = "rmux"; Winget = "Helvesec.RMUX" },
+    @{ Label = "eza";  Winget = "eza-community.eza" },
+    @{ Label = "glow"; Winget = "charmbracelet.glow" },
+    @{ Label = "yazi"; Winget = "sxyazi.yazi" }
 )
-
-if ($hasScoop) {
-    $buckets = (& scoop bucket list 2>$null) -join "`n"
-    if ($buckets -notmatch '(?m)^\s*rmux\s') {
-        Write-Host "`n==> Adding scoop bucket: rmux"
-        scoop bucket add rmux https://github.com/Helvesec/scoop-rmux
-    }
-}
 
 Write-Host "`n==> Install plan"
 $plan | ForEach-Object { Write-Host ("  - {0}" -f $_.Label) }
@@ -92,7 +123,7 @@ if (-not $Yes) {
 
 foreach ($item in $plan) {
     Write-Host "`n==> Installing $($item.Label)"
-    Install-Package -ScoopName $item.Scoop -WingetId $item.Winget -ChocoName $item.Choco
+    Install-Package -Label $item.Label -WingetId $item.Winget
 }
 
 Write-Host "`n==> Multiplexer"
