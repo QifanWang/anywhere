@@ -9,8 +9,11 @@
 | 系统 | Windows 11 |
 | 关键约束 | winget 可用但需大陆镜像；终端复用器走原生 ConPTY，不依赖 WSL / MSYS2 |
 | 策略 | 统一用 winget；`bootstrap.ps1` 负责配置链接与 PATH 补齐 |
+| 代理 | 本地代理需监听 `http://127.0.0.1:7890`；`prepare.ps1` 在当前会话设置 `HTTP_PROXY` / `HTTPS_PROXY` |
 
 前提：PowerShell 7 已安装（脚本本身依赖它运行，不纳入安装范围）。
+
+代理要求：安装前需在本机启动代理客户端并监听 `http://127.0.0.1:7890`（HTTP 代理）。`prepare.ps1` 会在当前 PowerShell 会话中设置 `$env:HTTP_PROXY` 与 `$env:HTTPS_PROXY`；若代理未启动，winget 下载可能失败，可在同一会话用 `Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY` 清除后重试。
 
 包管理器统一用 winget：Windows 11 内置、可用脚本静默安装，便于在新设备上复现完全一致的软件清单。终端用 Windows Terminal。两者的安装与配置见 §3.1。
 
@@ -49,6 +52,8 @@
 ```
 
 脚本要求在 PowerShell 7 中运行（启动时会检查），会检查 winget 并配置大陆镜像源（修改源需管理员权限）、安装 Windows Terminal、给出 Nerd Font 下载指引并验证终端。可重复运行；若仅确认源已是大陆镜像，不会改动。字体需按指引手动下载安装，脚本不代劳。
+
+脚本启动时设置 `$env:HTTP_PROXY` / `$env:HTTPS_PROXY` 为 `http://127.0.0.1:7890`。以 `.\scripts\win11\prepare.ps1` 方式运行时，脚本在**当前 PowerShell 进程**中执行，这两个环境变量会保留到脚本结束后，因此**同一会话**中后续调用 `install.ps1`、`bootstrap.ps1` 等脚本，以及它们启动的子进程（如 winget）都会继承代理设置。该设置是进程级的，不会写入用户环境变量；关闭终端、新开窗口，或用 `pwsh -File` 等独立进程方式运行时不会生效，需要重新设置。`verify.ps1` 只做本地检查，在新终端运行不受影响。
 
 完成后进入 §3.2。
 
@@ -124,3 +129,4 @@ Copy-Item "$repo\config\yazi\*.toml"       "$HOME\.config\yazi\" -Force
 2. **搜索/下载超时**：用 `winget source list -n winget` 检查源；若“参数”不是大陆镜像，按 §3.1 的命令重新添加（需要管理员权限）。
 3. **安装需要提权**：部分包会触发 UAC 或要求管理员权限，以管理员身份打开 PowerShell 后重试。
 4. **已安装但命令未生效**：重开终端后再运行 `verify.ps1`；PowerShell 别名还需按本节的 `aliases.ps1` 步骤加载。
+5. **下载超时且镜像已配置**：确认本地代理 `127.0.0.1:7890` 正在监听；若代理未运行，可在当前会话执行 `Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY` 后重试。

@@ -6,6 +6,10 @@ param([switch]$Yes)
 
 $ErrorActionPreference = "Stop"
 
+# 代理仅设置在当前 PowerShell 进程；同一会话后续脚本及其子进程会继承。
+$env:HTTP_PROXY = "http://127.0.0.1:7890"
+$env:HTTPS_PROXY = "http://127.0.0.1:7890"
+
 # winget 0x8A15002B：已安装且没有可用升级，在 PowerShell 中表现为 -1978335189
 $Script:WingetNoUpgradeExitCode = -1978335189
 
