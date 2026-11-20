@@ -6,7 +6,8 @@
 # 策略:   Rust 系（yazi/fd）用 GitHub Release musl 静态包规避老 glibc；
 #         Go 系（fzf/lazygit）用官方 Release 单二进制；glow 用 go install（v3）；
 #         eza 用 cargo install。
-# 不含:   helix（源码编译 + grammar 补丁，见 docs/linux-fedora-toolchain.md 第 4.1 节）
+# 前置:   bash scripts/linux-fedora/prepare.sh（检查依赖）
+# 不含:   helix（源码编译 + grammar 补丁，见 docs/linux-fedora-toolchain.md 第 3.2 节）
 #         tmux（系统自带；标准 Fedora 用 dnf install tmux）
 # 依赖:   curl / unzip / tar；eza 需 rustup（cargo）；glow 需 go >= 1.26.5
 # 用法:   bash scripts/linux-fedora/install.sh
@@ -119,8 +120,8 @@ main() {
   install_glow
   install_eza
 
-  log "完成。helix 未自动安装（源码编译），见 docs/linux-fedora-toolchain.md 第 4.1 节"
-  printf '  接下来运行: bash scripts/shared/bootstrap.sh  链接配置\n'
+  log "完成。helix 未自动安装（源码编译），见 docs/linux-fedora-toolchain.md 第 3.2 节"
+  printf '  接下来运行: bash scripts/linux-fedora/bootstrap.sh  链接配置\n'
   printf '  shell 集成（~/.bashrc 末尾，须在 .cargo/env 之后）:\n'
   printf '    . "$HOME/anywhere/config/shell/env.sh"\n'
   printf '    . "$HOME/anywhere/config/eza/aliases.sh"\n'

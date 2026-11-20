@@ -13,4 +13,4 @@
 | `:w` / `:q` | 保存 / 退出（`wq` 保存退出） |
 | `space f` / `space s` | 文件选择器 / 全工程符号搜索 |
 
-> 剪贴板方案（ssh 远程）：yank 时发 OSC 52（由本地终端写入本机剪贴板）+ 写 tmux buffer；paste 读 tmux buffer。详见 `../../config/helix/config.toml` 注释。linux-fedora 在 glibc 2.28 上必须源码编译，见 `../linux-fedora-toolchain.md` 第 4.1 节。
+> 剪贴板方案（ssh 远程）：yank 时发 OSC 52（由本地终端写入本机剪贴板）+ 写 tmux buffer；paste 读 tmux buffer。详见 `../../config/helix/config.toml` 注释。linux-fedora 在 glibc 2.28 上必须源码编译，见 `../linux-fedora-toolchain.md` 第 3.2 节。

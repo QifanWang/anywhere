@@ -1,5 +1,7 @@
 # Linux（Fedora / RHEL 系）工具链
 
+## 1. 前置说明
+
 平台工具链文档：`docs/linux-fedora-toolchain.md`。跨平台工具/功能对照见 [toolchain.yaml](toolchain.yaml)，命令速查见 `cheatsheet/`。
 
 **实测环境**（2026-11，版本与路径均在本机验证）：
@@ -16,31 +18,22 @@
 两份工具链文档（`win11-toolchain.md` 与 `linux-fedora-toolchain.md`）使用相同章节结构：
 
 ```text
-1. 包管理器
-2. 终端与 Shell
-3. 工具与功能
-4. 安装、配置与验证
+1. 前置说明
+2. 工具与功能
+3. 安装、配置与验证
 ```
 
-## 1. 包管理器
-
-dnf 不可用，所有工具都安装到用户目录 `~/.local/bin`。glibc 2.28 下的策略：
+**包管理器**：dnf 不可用，所有工具都安装到用户目录 `~/.local/bin`。glibc 2.28 下的策略：
 
 | 工具类型 | 策略 | 原因 |
 | --- | --- | --- |
 | Rust 系（yazi、fd） | GitHub Release **musl 静态包** | 官方 gnu 包要求 `GLIBC_2.29+`（yazi 实测要 2.39），musl 包 static-pie 无 glibc 依赖 |
 | Go 系（glow、lazygit、fzf） | GitHub Release 单二进制 / `go install` | Go 静态编译，无 glibc 依赖 |
 | eza | `cargo install`（rustup stable） | crates.io 版本够新，编译可用 |
-| helix | **源码编译**（官方包同样 glibc 不兼容） | 见 §4.1 |
+| helix | **源码编译**（官方包同样 glibc 不兼容） | 见 §3.2 |
 | tmux | 系统自带 | tmux 2.7 够用 |
 
-一键安装（helix 除外，见 §4.1）：
-
-```bash
-bash scripts/linux-fedora/install.sh
-```
-
-## 2. 终端与 Shell
+**终端与 Shell**：
 
 | 项 | 当前状态 |
 | --- | --- |
@@ -51,9 +44,9 @@ bash scripts/linux-fedora/install.sh
 | 智能提示 | **当前不配置** |
 | Wrapper / 环境变量 | `y` / `yg` / `gw`；`FZF_DEFAULT_COMMAND`、`FZF_DEFAULT_OPTS`、`HELIX_RUNTIME`、`EDITOR=hx`、`VISUAL=hx` |
 
-`env.sh` 与 eza 别名的加载命令见 §4.2。
+`env.sh` 与 eza 别名的加载命令见 §3.2。
 
-## 3. 工具与功能
+## 2. 工具与功能
 
 本平台工具清单如下；每个工具承载的功能及跨平台对照见 [toolchain.yaml](toolchain.yaml)。
 
@@ -74,76 +67,30 @@ bash scripts/linux-fedora/install.sh
 - glow 非 TTY + 文件参数输出为空，预览插件需走 stdin；eza 非 TTY 自动关颜色，预览插件需 `--color=always`。
 - helix 的 `HELIX_RUNTIME` 与 `EDITOR` / `VISUAL` 由 `config/shell/env.sh` 提供。
 
-## 4. 安装、配置与验证
+## 3. 安装、配置与验证
 
-### 4.1 安装
-
-按 §1 执行 `install.sh`，或手动安装以下工具。
-
-**yazi / ya（musl 静态包）**
+四步分别由 `scripts/linux-fedora/` 下的脚本完成，按顺序执行：
 
 ```bash
-curl -fL -o /tmp/yazi.zip \
-  https://github.com/sxyazi/yazi/releases/download/v26.9.1/yazi-x86_64-unknown-linux-musl.zip
-unzip -o /tmp/yazi.zip -d /tmp/yazi-dist
-d=/tmp/yazi-dist/yazi-x86_64-unknown-linux-musl
-install -m 755 "$d/yazi" "$HOME/.local/bin/yazi"
-install -m 755 "$d/ya"   "$HOME/.local/bin/ya"
-yazi --version && ya --version
-rm -rf /tmp/yazi.zip /tmp/yazi-dist
+bash scripts/linux-fedora/prepare.sh     # 前置准备
+bash scripts/linux-fedora/install.sh     # 安装工具链
+bash scripts/linux-fedora/bootstrap.sh   # 链接配置
+bash scripts/linux-fedora/verify.sh      # 验证（新开终端后）
 ```
 
-**不要用 `cargo install yazi-fm`**：crates.io 上只到 26.5.6，且其 asset 宏按 monorepo 兄弟目录布局写死相对路径，从 registry 安装必失败（26 个 `include_bytes!` 报错）；官方 build.rs 的防护只认 `index.crates.io-` 路径，国内镜像（如腾讯镜像）会绕过防护静默跳过。
+> 除 helix 外，命令都收进脚本；下文只保留手动步骤、脚本背后的关键点和排错信息。
 
-**fd / fzf / lazygit（Release 静态包）**
+### 3.1 前置准备
 
-```bash
-# fd —— yazi 的 s 键与 gf 平铺视图依赖
-curl -fsSL -o /tmp/fd.tgz \
-  https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-unknown-linux-musl.tar.gz
-tar -xzf /tmp/fd.tgz -C /tmp
-install -m 755 /tmp/fd-v10.2.0-x86_64-unknown-linux-musl/fd ~/.local/bin/fd
+`prepare.sh` 检查必需依赖（`curl` / `unzip` / `tar` / `cargo`、Go ≥ 1.26.5）并创建用户级安装目录 `~/.local/bin`，无需 root。缺失项逐条列出并以非零码退出，补齐后重跑即可。tmux 由系统提供（标准 Fedora 用 `dnf install tmux`），git 仅供 helix 手动编译，两者缺失都不影响脚本安装其他工具。
 
-# fzf —— yazi 26.9.1 默认键位已把 z 绑到内置 fzf 插件，装上二进制即生效
-# ⚠️ asset 文件名不带 v 前缀（tag 是 v0.75.0、文件是 fzf-0.75.0-…），拼错 404
-curl -fsSL -o /tmp/fzf.tgz \
-  https://github.com/junegunn/fzf/releases/download/v0.75.0/fzf-0.75.0-linux_amd64.tar.gz
-tar -xzf /tmp/fzf.tgz -C /tmp
-install -m 755 /tmp/fzf ~/.local/bin/fzf
+### 3.2 工具链
 
-# lazygit —— yazi 的 gi 键 shell --block 拉起
-curl -fsSL -o /tmp/lazygit.tgz \
-  https://github.com/jesseduffield/lazygit/releases/download/v0.66.3/lazygit_0.66.3_Linux_x86_64.tar.gz
-tar -xzf /tmp/lazygit.tgz -C /tmp lazygit
-install -m 755 /tmp/lazygit ~/.local/bin/lazygit
-```
+**安装**
 
-fzf 的候选源与外观由 `FZF_DEFAULT_COMMAND` / `FZF_DEFAULT_OPTS` 控制，已设在 `../config/shell/env.sh`（fd 候选源，含隐藏文件、排除 `.git`），无需 fzf 的 shell 集成脚本。
+`install.sh` 安装 §2 中除 helix 外的全部命令行工具，幂等：已安装的会跳过；升级时改脚本顶部版本号并先删旧二进制。
 
-**glow（v3）与 eza**
-
-glow v3 的 Go 模块路径**不是** `github.com/charmbracelet/glow`：
-
-| 命令 | 结果 |
-| --- | --- |
-| `go install github.com/charmbracelet/glow@latest` | 装到的是 v1.5.1（2023 年，坑） |
-| `go install github.com/charmbracelet/glow/v2@latest` | v2.1.2 |
-| `go install github.com/charmbracelet/glow/v3@latest` | **失败**：module declares its path as `charm.land/glow/v3` |
-| `go install charm.land/glow/v3@latest` | **v3.0.0**（要求 Go ≥ 1.26.5） |
-
-```bash
-go install charm.land/glow/v3@latest
-ln -sf "$(go env GOPATH)/bin/glow" "$HOME/.local/bin/glow"
-
-cargo install eza            # rustup stable，实测 v0.23.5
-ln -sf "$HOME/.cargo/bin/eza" "$HOME/.local/bin/eza"
-```
-
-> `go install` 的 `$GOPATH/bin` 不在 PATH 里，会表现为「装完找不到命令」——软链到 `~/.local/bin` 即可。
-
-**helix（源码编译；glibc 2.28 回退路径）**
-
-官方包 `helix-25.07.1-x86_64-linux.tar.xz` 要求 `GLIBC_2.29+`，老系统只能源码编译。**耗时最长（约十几分钟），`install.sh` 不自动执行**：
+手动安装仅 helix 例外（官方包要求 `GLIBC_2.29+`，glibc 2.28 只能源码编译；耗时约十几分钟，`install.sh` 不自动执行）：
 
 ```bash
 # 1) 源码 + grammar 子模块
@@ -179,56 +126,40 @@ cp -r /tmp/helix-25.07.1-x86_64-linux/runtime ~/.local/lib/helix/
 2. `rust-toolchain.toml` 锁 1.82.0 → cargo 1.82 无 edition2024；不带 `--locked` 重新解析依赖必失败
 3. grammar 拉取 245 个中 2 个失败（gottmp 404 / prolog 不可达）；补丁后重跑 `cargo install`，已编译 crate 直接复用
 
-### 4.2 配置链接
+脚本背后的关键点（排错时参考）：
 
-```bash
-bash scripts/shared/bootstrap.sh
-```
+- 不要用 `cargo install yazi-fm`：crates.io 只到 26.5.6，asset 宏写死 monorepo 兄弟目录布局，从 registry 安装必失败（26 个 `include_bytes!` 报错）；国内镜像还会绕过 build.rs 防护。脚本用 GitHub Release 的 musl 静态包。
+- glow v3 的模块路径是 `charm.land/glow/v3`，不是 `github.com/charmbracelet/glow`（后者 `go install` 会装到 v1.5.1）。
+- fzf asset 文件名不带 v 前缀（tag `v0.75.0`、文件 `fzf-0.75.0-…`）。
+- `go install` 的 `$GOPATH/bin` 与 cargo 的 `~/.cargo/bin` 不在 PATH 时，脚本会软链到 `~/.local/bin`；fzf 候选源与外观由 `config/shell/env.sh` 的 `FZF_DEFAULT_COMMAND` / `FZF_DEFAULT_OPTS` 提供，无需 fzf shell 集成脚本。
 
-脚本会：
+**配置链接**
 
-- 把 `../config/glow/`、`../config/yazi/`、`../config/helix/` 链接到 `~/.config/`
-- **tmux 版本分支**：tmux ≥ 3.1 链接 `../config/tmux/` → `~/.config/tmux/`；tmux < 3.1（含 2.7）改链单文件 `~/.tmux.conf`
+`bootstrap.sh` 把 `../config/glow/`、`../config/yazi/`、`../config/helix/` 链接到 `~/.config/`；tmux ≥ 3.1 链接 `../config/tmux/` → `~/.config/tmux/`，tmux < 3.1（含 2.7）改链单文件 `~/.tmux.conf`。已有配置先备份为 `.bak`，已指向同一源目录的链接会跳过。
 
-shell 集成：在 `~/.bashrc`（或 `~/.zshrc`）**末尾**追加：
+shell 集成（只需一次）：在 `~/.bashrc`（或 `~/.zshrc`）**末尾**追加：
 
 ```bash
 . "$HOME/anywhere/config/shell/env.sh"
 . "$HOME/anywhere/config/eza/aliases.sh"
 ```
 
-> ⚠️ 必须放在 `. "$HOME/.cargo/env"` **之后**（若使用 rustup）：cargo env 会把 `~/.cargo/bin` prepend 到 PATH 第 1 位，本文件把 `~/.local/bin` 重新前置，否则 cargo 装的旧版 `ya` 等会遮蔽 `~/.local/bin` 里的新版。
+> ⚠️ 必须放在 `. "$HOME/.cargo/env"` **之后**（若使用 rustup）：cargo env 会把 `~/.cargo/bin` prepend 到 PATH 第 1 位，本文件把 `~/.local/bin` 重新前置，否则 cargo 装的旧版 `ya` 等会遮蔽新版。
 
-**yazi 插件（已随仓库入库）**
-
-`git.yazi`（列表 git 角标）与 `vcs-files.yazi`（`gv` 键变更文件视图）已复制到 `../config/yazi/plugins/`，`bootstrap.sh` 整目录链接后即生效，**无需联网安装**。
-
-如需改用包管理器方式（更新更及时，但版本不锁定）：
-
-```bash
-ya pkg add yazi-rs/plugins:git
-ya pkg add yazi-rs/plugins:vcs-files
-```
-
-> ⚠️ 语法是 `repo:name`（**冒号**），写成 `repo#name` 报 "must be in kebab-case"。
-> ⚠️ `yazi-rs/plugins:fzf` 会失败——fzf 插件已内置化并从插件仓库移除，属正常。
-> ⚠️ 若 `~/.config/yazi` 是指向本仓库的软链，`ya pkg add` 会直接写进仓库（`git status` 变脏）。
+yazi 插件（已随仓库入库）：`git.yazi` / `vcs-files.yazi` 在 `../config/yazi/plugins/`，`bootstrap.sh` 整目录链接后即生效，无需联网。若改用 `ya pkg add yazi-rs/plugins:git` / `yazi-rs/plugins:vcs-files`：语法是 `repo:name`（冒号），fzf 插件已内置化（add 失败属正常），且 `~/.config/yazi` 是指向本仓库的软链时会直接写进仓库。
 
 git 角标三件套缺一不可：`yazi.toml` 的 `prepend_fetchers` + `init.lua` 的 `require("git"):setup` + `theme.toml` `[git]` 段配色。
 
-### 4.3 验证
+**验证**
 
-```bash
-tmux -V; yazi --version; ya --version; glow --version; eza --version
-fd --version; fzf --version; lazygit --version; hx --version
+新开终端后运行 `verify.sh`：非交互式检查命令与版本、PATH 首项与解析路径、配置链接、shell 集成、yazi 插件；逐项 PASS / FAIL，有失败项时退出码为 1。
 
-# 解析路径（确认全部命中 ~/.local/bin）
-bash -ic 'for b in yazi ya glow eza fd fzf lazygit hx; do printf "%-9s %s\n" "$b" "$(command -v "$b")"; done'
+脚本不覆盖的交互项：
 
-# yazi：gf 平铺视图 / gi lazygit / gv 变更文件 / z 模糊搜索；.md 文件预览应为 glow 渲染
-```
+- yazi：`gf` 平铺视图 / `gi` lazygit / `gv` 变更文件 / `z` 模糊搜索；`.md` 文件预览应为 glow 渲染。
+- glow 非 TTY + 文件参数必须走 stdin、eza 非 TTY 需 `--color=always`（预览插件已处理，见排错表）。
 
-### 4.4 排错
+**排错**
 
 | # | 坑 | 要点 |
 | --- | --- | --- |

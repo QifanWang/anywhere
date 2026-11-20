@@ -17,11 +17,13 @@
 
 ## 章节结构
 
-两份平台指南结构目前不同：
+两份平台指南结构相同：
 
 | 文档 | 章节 |
 | --- | --- |
 | `win11-toolchain.md` | 1. 前置说明 / 2. 工具与功能 / 3. 安装、配置与验证 |
-| `linux-fedora-toolchain.md` | 1. 包管理器 / 2. 终端与 Shell / 3. 工具与功能 / 4. 安装、配置与验证 |
+| `linux-fedora-toolchain.md` | 1. 前置说明 / 2. 工具与功能 / 3. 安装、配置与验证 |
 
-`toolchain.yaml` 的 `platforms.<平台>.tools` 与 `functions` 取自各指南的「工具与功能」清单（win11 为第 2 节，linux-fedora 为第 3 节）；安装/配置脚本对应「安装、配置与验证」节，不在 YAML 中重复。
+第 3 节下分「前置准备」与「工具链」，工具链内按 安装 / 配置链接 / 验证 / 排错 展开。
+
+`toolchain.yaml` 的 `platforms.<平台>.tools` 与 `functions` 取自各指南的「工具与功能」清单（均为第 2 节）；安装/配置脚本对应「安装、配置与验证」节，不在 YAML 中重复。

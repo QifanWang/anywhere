@@ -22,8 +22,11 @@
 **Fedora / RHEL 系（含 TencentOS）**
 
 ```bash
-bash scripts/linux-fedora/install.sh
-bash scripts/shared/bootstrap.sh
+bash scripts/linux-fedora/prepare.sh     # 前置准备：检查依赖
+bash scripts/linux-fedora/install.sh     # 安装工具链
+bash scripts/linux-fedora/bootstrap.sh   # 链接配置到 XDG
+# 在 ~/.bashrc / ~/.zshrc 加载 env.sh 与 aliases.sh 后新开终端
+bash scripts/linux-fedora/verify.sh      # 验证工具链
 ```
 
 详见各平台指南。

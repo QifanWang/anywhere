@@ -49,4 +49,4 @@ win11 使用 [RMUX](rmux.md)，不使用 tmux。本页适用于 Linux / WSL 等�
 | `C-b ]` | 粘贴 |
 | `q` / `Esc` | 退出复制模式 |
 
-> linux-fedora 实测为 tmux 2.7：`mode-keys emacs`，搜索用 `C-s` / `C-r`；且 tmux < 3.1 不认 XDG 路径，`bootstrap.sh` 会改链单文件 `~/.tmux.conf`。
+> linux-fedora 实测为 tmux 2.7：`mode-keys emacs`，搜索用 `C-s` / `C-r`；且 tmux < 3.1 不认 XDG 路径，`scripts/linux-fedora/bootstrap.sh` 会改链单文件 `~/.tmux.conf`。

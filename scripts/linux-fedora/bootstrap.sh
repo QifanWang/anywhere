@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把仓库中的配置链接到 XDG 配置目录（WSL / macOS / Linux）
+# 把仓库中的配置链接到 XDG 配置目录（linux-fedora）；可重复运行。
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -58,7 +58,7 @@ if command -v tmux >/dev/null 2>&1; then
     echo "[note]   tmux ${tmux_major}.x < 3.1，已链接到 ~/.tmux.conf（不支持 XDG 路径）"
   fi
 else
-  echo "[note]   未检测到 tmux，跳过（win11 用 config/rmux/rmux.conf）"
+  echo "[note]   未检测到 tmux，跳过 tmux 配置链接"
 fi
 
 echo
@@ -67,6 +67,7 @@ echo "  在 ~/.bashrc 或 ~/.zshrc 末尾加入（须在 . \"\$HOME/.cargo/env\"
 echo "    . \"$REPO/config/shell/env.sh\""
 echo "    . \"$REPO/config/eza/aliases.sh\""
 echo
-echo "  工具安装（linux-fedora）：bash scripts/linux-fedora/install.sh"
+echo "  安装：bash scripts/linux-fedora/install.sh"
+echo "  验证：bash scripts/linux-fedora/verify.sh（新开终端后）"
 echo
 echo "完成。"
