@@ -8,3 +8,5 @@
 | glow | `glow.md` |
 | yazi | `yazi.md` |
 | helix | `helix.md` |
+| zoxide | `zoxide.md` |
+| PowerShell shell 交互（PSReadLine / oh-my-posh） | `powershell.md` |

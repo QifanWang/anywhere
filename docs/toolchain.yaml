@@ -4,14 +4,17 @@ version: 1
 platforms:
   win11:
     tools:
-      rmux:    { role: 终端复用, version: 0.10.0, config: config/rmux/rmux.conf }
-      eza:     { role: 目录列表, version: 0.23.5, config: config/eza/aliases.ps1 }
-      glow:    { role: Markdown 阅读与预览, version: 3.0.0, config: config/glow/glow.yml }
-      yazi:    { role: 文件管理与预览, version: 26.9.1, config: config/yazi/ }
-      helix:   { role: 模态编辑器, version: 25.07.1, config: config/helix/config.toml }
-      fd:      { role: 文件查找, version: 10.2.0, config: null }
-      fzf:     { role: 模糊搜索, version: 0.75.0, config: null }
-      lazygit: { role: Git 面板, version: 0.66.3, config: null }
+      rmux:       { role: 终端复用, version: 0.10.0, config: config/rmux/rmux.conf }
+      eza:        { role: 目录列表, version: 0.23.5, config: config/eza/aliases.ps1 }
+      glow:       { role: Markdown 阅读与预览, version: 3.0.0, config: config/glow/glow.yml }
+      yazi:       { role: 文件管理与预览, version: 26.9.1, config: config/yazi/ }
+      helix:      { role: 模态编辑器, version: 25.07.1, config: config/helix/config.toml }
+      fd:         { role: 文件查找, version: 10.2.0, config: null }
+      fzf:        { role: 模糊搜索, version: 0.75.0, config: null }
+      lazygit:    { role: Git 面板, version: 0.66.3, config: null }
+      zoxide:     { role: 目录跳转, version: 0.10.0, config: config/shell/profile.ps1 }
+      oh-my-posh: { role: 提示符, version: 31.1.3, config: config/oh-my-posh/anywhere.omp.json }
+      PSReadLine: { role: 历史搜索与输入提示, version: 随 PowerShell 7, config: config/shell/profile.ps1 }
 
   linux-fedora:
     tools:
@@ -58,6 +61,18 @@ functions:
     linux: helix
     note: 命令为 hx；两平台共用 config/helix/config.toml
   - role: Shell wrapper
-    win11: 未配置
+    win11: profile.ps1（eza 别名 + PSReadLine + zoxide + oh-my-posh）
     linux: y / yg / gw
-    note: 定义在 config/shell/env.sh
+    note: Unix 定义在 config/shell/env.sh；win11 定义在 config/shell/profile.ps1，由 $PROFILE 一行 dot-source
+  - role: 目录跳转
+    win11: zoxide（z / zi）
+    linux: 未配置
+    note: z 直达按访问频率匹配，zi 用 fzf 交互选择（复用已装的 fzf）；zoxide 接管 cd，与 yazi 的 z 键无关
+  - role: 历史搜索与输入提示
+    win11: PSReadLine
+    linux: 未配置
+    note: PowerShell 7 内置模块；上下键前缀搜历史、Tab 菜单补全、基于历史的灰色预测；要求 >= 2.2.6
+  - role: 提示符
+    win11: oh-my-posh（anywhere.omp.json）
+    linux: 未配置
+    note: 主题与 yazi 同为 Catppuccin 风格；需 Nerd Font；一份主题可用于 bash / zsh / PowerShell

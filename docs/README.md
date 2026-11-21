@@ -8,12 +8,14 @@
 | `linux-fedora-toolchain.md` | Fedora / RHEL 系工具链指南，TencentOS 实测 |
 | `toolchain.yaml` | 跨平台工具/功能对照，仅对齐各平台指南的「工具与功能」清单 |
 | `cheatsheet/` | 按工具拆分的命令速查，见 `cheatsheet/README.md` |
+| `tui-workflow-gaps.md` | 现代 TUI 工作流缺口分析（分析记录，未实施） |
 
 ## 各文件关系
 
 - **平台指南**（`*-toolchain.md`）是操作入口：说明本平台装什么、怎么装、怎么验证。
 - **`toolchain.yaml`** 只做对照：把各平台的工具与功能列在一起，数据取自平台指南的「工具与功能」小节。要改工具清单，先改平台指南，再同步到这里。
 - **`cheatsheet/`** 只收录命令与按键，不重复安装步骤；安装步骤以平台指南为准。
+- **`tui-workflow-gaps.md`** 是阶段性分析记录，只描述缺口与优先级，不含实施方案。
 
 ## 章节结构
 

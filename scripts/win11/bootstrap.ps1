@@ -74,6 +74,42 @@ function Link-Directory {
     Write-Host "[copy]   $Destination <- $Source"
 }
 
+function Link-File {
+    param([string]$Source, [string]$Destination)
+
+    if (-not (Test-Path -LiteralPath $Source)) {
+        Write-Warning "源文件不存在: $Source"
+        return
+    }
+
+    $parent = Split-Path -Parent $Destination
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    $existingTarget = Get-LinkTarget -Path $Destination
+    if ($existingTarget) {
+        if ([string]::Equals(($existingTarget.TrimEnd('\')), ($Source.TrimEnd('\')), 'OrdinalIgnoreCase')) {
+            Write-Host "[skip]   $Destination -> $Source"
+            return
+        }
+        Remove-PathSafely -Path $Destination
+    } else {
+        Backup-Existing -Path $Destination
+    }
+
+    try {
+        New-Item -ItemType SymbolicLink -Path $Destination -Target $Source -ErrorAction Stop | Out-Null
+        Write-Host "[link]   $Destination -> $Source"
+        return
+    } catch {
+        # 符号链接需要管理员/开发者模式，回退为复制
+    }
+
+    Copy-Item -LiteralPath $Source -Destination $Destination -Force
+    Write-Host "[copy]   $Destination <- $Source"
+}
+
 function Join-PathEntries {
     param([string[]]$PathValues)
     $seen = @{}
@@ -172,11 +208,12 @@ $env:XDG_CONFIG_HOME = $configHome
 Write-Host "==> XDG_CONFIG_HOME: $configHome"
 
 $linkMap = @(
-    @{ Source = "eza";   Xdg = "eza";   AppData = "eza" },
-    @{ Source = "glow";  Xdg = "glow";  AppData = "glow" },
-    @{ Source = "helix"; Xdg = "helix"; AppData = "helix" },
-    @{ Source = "rmux";  Xdg = "rmux";  AppData = "rmux" },
-    @{ Source = "yazi";  Xdg = "yazi";  AppData = "yazi\config" }
+    @{ Source = "eza";        Xdg = "eza";        AppData = "eza" },
+    @{ Source = "glow";       Xdg = "glow";       AppData = "glow" },
+    @{ Source = "helix";      Xdg = "helix";      AppData = "helix" },
+    @{ Source = "rmux";       Xdg = "rmux";       AppData = "rmux" },
+    @{ Source = "yazi";       Xdg = "yazi";       AppData = "yazi\config" },
+    @{ Source = "oh-my-posh"; Xdg = "oh-my-posh"; AppData = "oh-my-posh" }
 )
 
 Write-Host "`n==> Linking configs"
@@ -187,26 +224,29 @@ foreach ($item in $linkMap) {
         Link-Directory -Source $source -Destination (Join-Path $env:APPDATA $item.AppData)
     }
 }
-# config/tmux 与 config/shell/env.sh 只用于其他平台，Windows 不链接。
+# config/shell/profile.ps1 是单文件，单独链接；config/shell/env.sh 只用于其他平台。
+Link-File -Source (Join-Path $Repo "config\shell\profile.ps1") -Destination (Join-Path $configHome "shell\profile.ps1")
 
 Write-Host "`n==> Checking PATH"
 Refresh-ProcessPath
 $tools = @(
-    @{ Name = "rmux";    WingetId = "Helvesec.RMUX" },
-    @{ Name = "eza";     WingetId = "eza-community.eza" },
-    @{ Name = "glow";    WingetId = "charmbracelet.glow" },
-    @{ Name = "yazi";    WingetId = "sxyazi.yazi" },
-    @{ Name = "hx";      WingetId = "Helix.Helix" },
-    @{ Name = "fd";      WingetId = "sharkdp.fd" },
-    @{ Name = "fzf";     WingetId = "junegunn.fzf" },
-    @{ Name = "lazygit"; WingetId = "JesseDuffield.lazygit" }
+    @{ Name = "rmux";       WingetId = "Helvesec.RMUX" },
+    @{ Name = "eza";        WingetId = "eza-community.eza" },
+    @{ Name = "glow";       WingetId = "charmbracelet.glow" },
+    @{ Name = "yazi";       WingetId = "sxyazi.yazi" },
+    @{ Name = "hx";         WingetId = "Helix.Helix" },
+    @{ Name = "fd";         WingetId = "sharkdp.fd" },
+    @{ Name = "fzf";        WingetId = "junegunn.fzf" },
+    @{ Name = "lazygit";    WingetId = "JesseDuffield.lazygit" },
+    @{ Name = "zoxide";     WingetId = "ajeetdsouza.zoxide" },
+    @{ Name = "oh-my-posh"; WingetId = "JanDeDobbeleer.OhMyPosh" }
 )
 foreach ($tool in $tools) {
     Assert-ToolPath -Name $tool.Name -WingetId $tool.WingetId
 }
 
 Write-Host "`n==> 接下来（只需一次）"
-Write-Host "  在 PowerShell 配置文件（`$PROFILE）中加入:"
-Write-Host ("    . '{0}'" -f (Join-Path $configHome "eza\aliases.ps1").Replace("'", "''"))
+Write-Host "  在 PowerShell 配置文件（`$PROFILE）中加入（eza 别名 / PSReadLine / zoxide / oh-my-posh 全在这里）:"
+Write-Host ("    . '{0}'" -f (Join-Path $configHome "shell\profile.ps1").Replace("'", "''"))
 Write-Host "  验证: 重开终端后运行 .\\scripts\\win11\\verify.ps1"
 Write-Host "`n完成。"

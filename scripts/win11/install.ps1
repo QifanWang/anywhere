@@ -48,14 +48,16 @@ if (-not (Test-CommandExists "winget")) {
 Write-Host ("  winget {0}" -f ((& winget --version) -join " "))
 
 $plan = @(
-    @{ Label = "rmux";    Winget = "Helvesec.RMUX" },
-    @{ Label = "eza";     Winget = "eza-community.eza" },
-    @{ Label = "glow";    Winget = "charmbracelet.glow" },
-    @{ Label = "yazi";    Winget = "sxyazi.yazi" },
-    @{ Label = "helix";   Winget = "Helix.Helix" },
-    @{ Label = "fd";      Winget = "sharkdp.fd" },
-    @{ Label = "fzf";     Winget = "junegunn.fzf" },
-    @{ Label = "lazygit"; Winget = "JesseDuffield.lazygit" }
+    @{ Label = "rmux";       Winget = "Helvesec.RMUX" },
+    @{ Label = "eza";        Winget = "eza-community.eza" },
+    @{ Label = "glow";       Winget = "charmbracelet.glow" },
+    @{ Label = "yazi";       Winget = "sxyazi.yazi" },
+    @{ Label = "helix";      Winget = "Helix.Helix" },
+    @{ Label = "fd";         Winget = "sharkdp.fd" },
+    @{ Label = "fzf";        Winget = "junegunn.fzf" },
+    @{ Label = "lazygit";    Winget = "JesseDuffield.lazygit" },
+    @{ Label = "zoxide";     Winget = "ajeetdsouza.zoxide" },
+    @{ Label = "oh-my-posh"; Winget = "JanDeDobbeleer.OhMyPosh" }
 )
 
 Write-Host "`n==> Install plan"
@@ -77,8 +79,16 @@ foreach ($item in $plan) {
 Write-Host "`n==> Multiplexer"
 Write-Host "  win11 使用 RMUX（原生 ConPTY，无需 WSL）；tmux 仅保留给其他平台"
 
+Write-Host "`n==> Shell integration"
+$psrl = Get-Module -ListAvailable PSReadLine | Select-Object -First 1
+if ($psrl) {
+    Write-Host ("  PSReadLine {0}: OK（PowerShell 7 内置）" -f $psrl.Version)
+} else {
+    Write-Host "  PSReadLine: NOT FOUND（历史搜索 / 预测不可用）"
+}
+
 Write-Host "`n==> Verification"
-foreach ($name in @("rmux", "eza", "glow", "yazi", "hx", "fd", "fzf", "lazygit")) {
+foreach ($name in @("rmux", "eza", "glow", "yazi", "hx", "fd", "fzf", "lazygit", "zoxide", "oh-my-posh")) {
     $cmd = Get-Command $name -ErrorAction SilentlyContinue
     if ($cmd) {
         Write-Host ("  {0}: OK" -f $name)
