@@ -91,15 +91,20 @@
 - 设置持久化的 `XDG_CONFIG_HOME`（默认 `$HOME\.config`）并同步当前会话
 - 优先创建**目录联接（Junction）**，失败时回退为复制；已指向同一源目录的链接会跳过
 - 已有配置会先备份为 `.bak`（备份本身是链接时只删除链接，不会误删源目录）
+- 在 `$PROFILE.CurrentUserAllHosts` 中**幂等注入**一行 dot-source（带 marker，重复运行不会叠加）；若任一 profile 变体已有引用则跳过
+- 支持 `-SkipProfile` 完全跳过 profile 修改，`-ProfileTarget` 指定注入到其它变体，`-WhatIf` 预览改动
 
 `profile.ps1` 内部按"工具存在才初始化"的顺序加载：eza 别名 → PSReadLine（历史搜索 / 预测 / Tab 菜单补全）→ zoxide（接管 `cd`）→ oh-my-posh（提示符）。任何一项缺失都不会让 shell 启动失败。
 
-在 PowerShell 配置文件（`$PROFILE`）中加载 `profile.ps1`（只需一次）：
+注入的 managed block 形如：
 
 ```powershell
-notepad $PROFILE                       # 若不存在，先执行 New-Item -ItemType File -Path $PROFILE -Force
+# >>> anywhere:shell-profile >>>
 . "$env:XDG_CONFIG_HOME\shell\profile.ps1"
+# <<< anywhere:shell-profile <<<
 ```
+
+因为写在 `CurrentUserAllHosts`（`Profile.ps1`），`pwsh` 与 VS Code 等宿主都会加载；它先于 `CurrentUserCurrentHost`（`$PROFILE`）执行，所以用户自己的 `$PROFILE` 仍可覆盖仓库配置。
 
 > 之前手工写入的 `. "...\eza\aliases.ps1"` 可以删掉——`profile.ps1` 已包含它，重复 dot-source 无害但无必要。
 
@@ -116,6 +121,8 @@ Copy-Item "$repo\config\yazi\*.toml"            "$HOME\.config\yazi\" -Force
 Copy-Item "$repo\config\oh-my-posh\*.json"      "$HOME\.config\oh-my-posh\" -Force
 Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1" -Force
 ```
+
+若使用了 `-SkipProfile` 或手动复制，还需自行在目标 profile 中加入上面的 managed block；bootstrap 正常执行时会自动注入。
 
 **验证**
 

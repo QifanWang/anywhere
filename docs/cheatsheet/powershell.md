@@ -2,7 +2,7 @@
 
 配置源文件：`../../config/shell/profile.ps1`。安装与配置链接见 `../win11-toolchain.md`；zoxide 单独见 `zoxide.md`。
 
-`profile.ps1` 由用户 `$PROFILE` 一行 dot-source，内部按"工具存在才初始化"加载：eza 别名 → PSReadLine → zoxide → oh-my-posh。
+`profile.ps1` 由 bootstrap 自动在 `$PROFILE.CurrentUserAllHosts` 注入一行 dot-source（`-SkipProfile` 可跳过），内部按"工具存在才初始化"加载：eza 别名 → PSReadLine → zoxide → oh-my-posh。
 
 ## PSReadLine（PowerShell 7 内置，历史搜索与提示）
 

@@ -12,12 +12,12 @@
 .\scripts\win11\prepare.ps1     # 前置准备：winget 镜像源 + Windows Terminal
 # 重开 PowerShell 7 终端
 .\scripts\win11\install.ps1     # 安装工具链
-.\scripts\win11\bootstrap.ps1   # 链接配置到 XDG/APPDATA，校验/修复 PATH
+.\scripts\win11\bootstrap.ps1   # 链接配置到 XDG/APPDATA，校验/修复 PATH，注入 profile 引用
 # 再新开终端
 .\scripts\win11\verify.ps1      # 验证工具链
 ```
 
-还需在 `$PROFILE` 中加载 eza 别名（只需一次），见 `docs/win11-toolchain.md`。
+bootstrap 会自动在 `$PROFILE.CurrentUserAllHosts` 注入 shell profile 引用；如需跳过可用 `-SkipProfile`，见 `docs/win11-toolchain.md`。
 
 **Fedora / RHEL 系（含 TencentOS）**
 

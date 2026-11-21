@@ -1,6 +1,6 @@
 # anywhere / PowerShell 7 shell 交互配置
 # 位置：$env:XDG_CONFIG_HOME\shell\profile.ps1（由 scripts/win11/bootstrap.ps1 链接）
-# 用法：在 $PROFILE 末尾加一行：
+# 加载：bootstrap 自动在 $PROFILE.CurrentUserAllHosts 注入 managed block（可用 -SkipProfile 跳过）
 #   . "$env:XDG_CONFIG_HOME\shell\profile.ps1"
 # 加载顺序：eza 别名 -> PSReadLine -> zoxide -> oh-my-posh
 # 每项都做存在性检查，缺任一工具都不会让 shell 启动失败。

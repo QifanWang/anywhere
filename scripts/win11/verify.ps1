@@ -92,20 +92,28 @@ if ($psrl) {
 } else {
     Add-Result "PSReadLine" $false "未加载（需 PowerShell 7）"
 }
-# zoxide init 注册 z 函数；用函数而非别名判断
-$cmdZ = Get-Command z -CommandType Function -ErrorAction SilentlyContinue
-if ($cmdZ) {
-    Add-Result "zoxide init (z)" $true
+# zoxide 0.10+ 的 init 把 z / zi 注册为别名，底层函数是 __zoxide_z / __zoxide_zi。
+# 原先用 Get-Command z -CommandType Function 判断：既可能命中无关的 z 模块而误判通过，
+# 也会在 zoxide 正常初始化时找不到 z 函数而误判失败，因此直接检查 init 生成的函数。
+$zoxideFn = @(Get-Command -Name '__zoxide_*' -CommandType Function -ErrorAction SilentlyContinue)
+$zoxideAlias = Get-Alias -Name z -ErrorAction SilentlyContinue
+if ($zoxideFn.Count -gt 0 -and $zoxideAlias -and $zoxideAlias.Definition -match '__zoxide_z') {
+    Add-Result "zoxide init (z)" $true "z 别名 -> $($zoxideAlias.Definition)"
+} elseif ($zoxideFn.Count -gt 0) {
+    Add-Result "zoxide init (z)" $true "已注册 $($zoxideFn.Count) 个 __zoxide_* 函数"
 } else {
-    Add-Result "zoxide init (z)" $false "z 函数不存在；检查 profile.ps1 是否加载"
+    Add-Result "zoxide init (z)" $false "未检测到 __zoxide_* 函数（检查 PATH 或 profile.ps1 是否加载）"
 }
-# oh-my-posh v3 通过 init 脚本重写 prompt 函数；Set-PoshPrompt 是旧版命令，不能用来判断。
-# init 输出会定义一批 __omp* 函数，比匹配 prompt 定义更稳定。
+# oh-my-posh 早期 v3 的 init 定义一批 __omp* 函数；v33+ 改为加载 oh-my-posh-core 模块，
+# 并定义 *-Posh* 函数（prompt 也由它接管），不再产生 __omp*。两种形态都算已初始化。
 $ompFn = @(Get-Command -Name '__omp*' -ErrorAction SilentlyContinue)
-if ($ompFn.Count -gt 0) {
-    Add-Result "oh-my-posh init" $true "oh-my-posh 已接管（$($ompFn.Count) 个 __omp* 函数）"
+$ompCore = Get-Module -Name oh-my-posh-core -ErrorAction SilentlyContinue
+$ompPoshFn = @(Get-Command -Name '*Posh*' -CommandType Function -ErrorAction SilentlyContinue)
+if ($ompFn.Count -gt 0 -or $ompCore -or $ompPoshFn.Count -gt 0) {
+    $detail = if ($ompCore) { "oh-my-posh-core 模块已加载" } else { "$($ompFn.Count) 个 __omp* 函数" }
+    Add-Result "oh-my-posh init" $true $detail
 } else {
-    Add-Result "oh-my-posh init" $false "未检测到 __omp* 函数（检查主题路径或 profile.ps1 是否加载）"
+    Add-Result "oh-my-posh init" $false "未检测到 oh-my-posh 初始化痕迹（检查主题路径、PATH 或 profile.ps1 是否加载）"
 }
 
 Write-Host "`n==> eza alias"

@@ -1,8 +1,13 @@
 # 把仓库中的配置链接到 Windows 实际配置目录，并校验工具 PATH
-# 优先使用目录联接（Junction），失败时回退为复制；可重复运行
+# 优先使用目录联接（Junction），失败时回退为复制；幂等注入 shell profile 引用；可重复运行
 
-[CmdletBinding()]
-param()
+[CmdletBinding(SupportsShouldProcess = $true)]
+param(
+    [ValidateSet('CurrentUserAllHosts', 'CurrentUserCurrentHost', 'AllUsersAllHosts', 'AllUsersCurrentHost')]
+    [string]$ProfileTarget = 'CurrentUserAllHosts',
+
+    [switch]$SkipProfile
+)
 
 $ErrorActionPreference = "Stop"
 
@@ -34,6 +39,80 @@ function Backup-Existing {
     Remove-PathSafely -Path $backup
     Rename-Item -LiteralPath $Path -NewName (Split-Path -Leaf $backup) -Force
     Write-Host "[backup] $backup"
+}
+
+function Backup-FileStamped {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
+    $backup = "$Path.bak-$stamp"
+    Copy-Item -LiteralPath $Path -Destination $backup -Force
+    Write-Host "[backup] $backup"
+}
+
+function Test-AnywhereProfileReference {
+    $paths = @(
+        $PROFILE,
+        $PROFILE.CurrentUserAllHosts,
+        $PROFILE.CurrentUserCurrentHost,
+        $PROFILE.AllUsersAllHosts,
+        $PROFILE.AllUsersCurrentHost
+    )
+    foreach ($path in ($paths | Select-Object -Unique)) {
+        if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+        try { $text = [System.IO.File]::ReadAllText($path) } catch { continue }
+        if ($text -match 'shell[\\/]profile\.ps1') { return $true }
+    }
+    return $false
+}
+
+function Ensure-ProfileReference {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param([string]$Path)
+
+    if (-not $Path) {
+        Write-Warning '未解析到目标 profile 路径，跳过注入。'
+        return
+    }
+
+    $markerStart = '# >>> anywhere:shell-profile >>>'
+    $markerEnd   = '# <<< anywhere:shell-profile <<<'
+    $sourceLine  = '. "$env:XDG_CONFIG_HOME\shell\profile.ps1"'
+
+    $parent = Split-Path -Parent $Path
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    $existed = Test-Path -LiteralPath $Path -PathType Leaf
+    $content = if ($existed) { [System.IO.File]::ReadAllText($Path) } else { '' }
+
+    if ($content -match 'shell[\\/]profile\.ps1') {
+        Write-Host "[skip]   $Path 已包含 profile.ps1 引用"
+        return
+    }
+
+    $lineEnding = if ($content -match "`r`n") { "`r`n" } else { "`n" }
+    $block = @($markerStart, $sourceLine, $markerEnd) -join $lineEnding
+
+    $startIndex = $content.IndexOf($markerStart, [System.StringComparison]::Ordinal)
+    $endIndex = if ($startIndex -ge 0) { $content.IndexOf($markerEnd, $startIndex, [System.StringComparison]::Ordinal) } else { -1 }
+    if ($startIndex -ge 0 -and $endIndex -ge 0) {
+        $endIndex += $markerEnd.Length
+        $content = $content.Substring(0, $startIndex) + $block + $content.Substring($endIndex)
+        $action = '更新'
+    } else {
+        $prefix = if ($existed -and $content -notmatch "(\r\n|\n)$") { $lineEnding } else { '' }
+        $content = $content + $prefix + $block + $lineEnding
+        $action = if ($existed) { '注入' } else { '创建' }
+    }
+
+    if ($PSCmdlet.ShouldProcess($Path, "$action anywhere shell profile 引用")) {
+        if ($existed) { Backup-FileStamped -Path $Path }
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($Path, $content, $utf8NoBom)
+        Write-Host "[$action] $Path"
+    }
 }
 
 function Link-Directory {
@@ -227,6 +306,24 @@ foreach ($item in $linkMap) {
 # config/shell/profile.ps1 是单文件，单独链接；config/shell/env.sh 只用于其他平台。
 Link-File -Source (Join-Path $Repo "config\shell\profile.ps1") -Destination (Join-Path $configHome "shell\profile.ps1")
 
+Write-Host "`n==> PowerShell profile"
+if ($SkipProfile) {
+    Write-Host "[skip]   -SkipProfile 已指定，未修改任何 profile"
+} elseif (Test-AnywhereProfileReference) {
+    Write-Host "[skip]   已在某个 `$PROFILE 中找到 shell\profile.ps1 引用"
+} else {
+    $targetProfile = switch ($ProfileTarget) {
+        'CurrentUserAllHosts'   { $PROFILE.CurrentUserAllHosts }
+        'CurrentUserCurrentHost' { $PROFILE.CurrentUserCurrentHost }
+        'AllUsersAllHosts'      { $PROFILE.AllUsersAllHosts }
+        'AllUsersCurrentHost'   { $PROFILE.AllUsersCurrentHost }
+    }
+    if ($ProfileTarget -like 'AllUsers*') {
+        Write-Warning "$ProfileTarget 通常需要管理员权限；如失败请改用 CurrentUser* 目标。"
+    }
+    Ensure-ProfileReference -Path $targetProfile
+}
+
 Write-Host "`n==> Checking PATH"
 Refresh-ProcessPath
 $tools = @(
@@ -245,8 +342,9 @@ foreach ($tool in $tools) {
     Assert-ToolPath -Name $tool.Name -WingetId $tool.WingetId
 }
 
-Write-Host "`n==> 接下来（只需一次）"
-Write-Host "  在 PowerShell 配置文件（`$PROFILE）中加入（eza 别名 / PSReadLine / zoxide / oh-my-posh 全在这里）:"
-Write-Host ("    . '{0}'" -f (Join-Path $configHome "shell\profile.ps1").Replace("'", "''"))
-Write-Host "  验证: 重开终端后运行 .\\scripts\\win11\\verify.ps1"
+Write-Host "`n==> 接下来"
+Write-Host "  新开 PowerShell 7 终端后运行 .\scripts\win11\verify.ps1"
+if ($SkipProfile) {
+    Write-Host '  使用 -SkipProfile 时请自行在合适的 $PROFILE 中加入：. "$env:XDG_CONFIG_HOME\shell\profile.ps1"'
+}
 Write-Host "`n完成。"
