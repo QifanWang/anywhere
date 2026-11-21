@@ -61,9 +61,9 @@ functions:
     linux: helix
     note: 命令为 hx；两平台共用 config/helix/config.toml
   - role: Shell wrapper
-    win11: profile.ps1（eza 别名 + PSReadLine + zoxide + oh-my-posh）
+    win11: profile.ps1（eza 别名 + PSReadLine + zoxide + oh-my-posh + y / yg / gw）
     linux: y / yg / gw
-    note: Unix 定义在 config/shell/env.sh；win11 定义在 config/shell/profile.ps1，由 $PROFILE 一行 dot-source
+    note: y = 退出 yazi 后 cd；yg = 选文件后 glow 精读；gw = 按终端宽度渲染 glow。Unix 定义在 config/shell/env.sh；win11 定义在 config/shell/profile.ps1，由 $PROFILE 一行 dot-source
   - role: 目录跳转
     win11: zoxide（z / zi）
     linux: 未配置

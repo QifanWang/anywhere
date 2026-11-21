@@ -124,6 +124,20 @@ if ($alias) {
     Add-Result "alias ll" $false "未加载；检查 `$PROFILE 是否 dot-source profile.ps1"
 }
 
+Write-Host "`n==> yazi wrappers"
+$hasYazi = [bool](Get-Command yazi -ErrorAction SilentlyContinue)
+$hasGlow = [bool](Get-Command glow -ErrorAction SilentlyContinue)
+foreach ($spec in @(
+        @{ Name = "y";  Required = $hasYazi },
+        @{ Name = "yg"; Required = ($hasYazi -and $hasGlow) },
+        @{ Name = "gw"; Required = $hasGlow }
+    )) {
+    if (-not $spec.Required) { continue }
+    $fn = Get-Command -Name $spec.Name -CommandType Function -ErrorAction SilentlyContinue
+    $detail = if ($fn) { "" } else { "未定义；检查 `$PROFILE 是否加载 profile.ps1" }
+    Add-Result "wrapper $($spec.Name)" ([bool]$fn) $detail
+}
+
 Write-Host "`n==> Configs"
 $configHome = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
 Add-Result "XDG_CONFIG_HOME" $true $configHome

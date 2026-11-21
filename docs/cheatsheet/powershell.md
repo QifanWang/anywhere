@@ -31,3 +31,15 @@
 
 - `z` / `zi`：见 `zoxide.md`。
 - `ll` / `la` / `lt` / `lg` 等：见 `eza.md`，由 `config/eza/aliases.ps1` 提供，`profile.ps1` 会加载它。
+
+## yazi wrapper（y / yg / gw）
+
+与 Unix `env.sh` 的三个 wrapper 对齐，定义在 `../../config/shell/profile.ps1`，依赖的工具存在才会定义（装完工具需重开终端）：
+
+| 命令 | 作用 |
+| --- | --- |
+| `y [yazi 参数]` | 启动 yazi，退出后自动 `cd` 到浏览目录；按 `Q`（`quit --no-cwd-file`）退出则不切换 |
+| `yg [yazi 参数]` | 在 yazi 里选文件（`--chooser-file`），退出后按终端宽度用 glow 精读 |
+| `gw [glow 参数]` | 按当前终端宽度渲染 glow，绕开 v3 的 120 列上限 |
+
+实现差异：Unix 的 `tput cols` 换为 `[Console]::WindowWidth`（失败时回退 `$Host.UI.RawUI.WindowSize.Width`，再失败取 0）；`GLOW_WIDTH` 仅在调用期间临时设置，结束后恢复原值。临时文件用 GUID 命名并总是清理，避免多会话并发冲突。

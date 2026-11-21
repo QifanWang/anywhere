@@ -39,7 +39,7 @@
 
 本地注意事项：
 
-- Shell 交互四项各有归属：**历史搜索 / 输入提示**用 PowerShell 7 内置的 PSReadLine；**提示符**用 oh-my-posh；**目录跳转**用 zoxide；**eza 别名**沿用 `config/eza/aliases.ps1`。四项由 `../config/shell/profile.ps1` 统一加载，用户 `$PROFILE` 只需一行 dot-source（见 §3.2）。
+- Shell 交互四项各有归属：**历史搜索 / 输入提示**用 PowerShell 7 内置的 PSReadLine；**提示符**用 oh-my-posh；**目录跳转**用 zoxide；**eza 别名**沿用 `config/eza/aliases.ps1`。四项由 `../config/shell/profile.ps1` 统一加载，用户 `$PROFILE` 只需一行 dot-source（见 §3.2）。同一文件还提供 `y` / `yg` / `gw` 三个 yazi wrapper，与 Unix 的 `env.sh` 对齐。
 - PSReadLine 随 PowerShell 7 分发，不通过 winget 安装，也不纳入 `install.ps1` 的清单；只需确认版本 ≥ 2.2.6（预测默认开启）。
 - RMUX 配置查找顺序：`%XDG_CONFIG_HOME%\rmux\rmux.conf` → `%USERPROFILE%\.rmux.conf` → `%APPDATA%\rmux\rmux.conf` → `%RMUX_CONFIG_FILE%`。本仓库提供原生 `rmux.conf`，不会回退到 `tmux.conf`。
 - `yazi` 的 `g f` / `g i` / `g v` 在 keymap 中声明 `for = "unix"`，win11 下不显示；`z` 模糊搜索依赖 fzf 二进制。
@@ -94,7 +94,7 @@
 - 在 `$PROFILE.CurrentUserAllHosts` 中**幂等注入**一行 dot-source（带 marker，重复运行不会叠加）；若任一 profile 变体已有引用则跳过
 - 支持 `-SkipProfile` 完全跳过 profile 修改，`-ProfileTarget` 指定注入到其它变体，`-WhatIf` 预览改动
 
-`profile.ps1` 内部按"工具存在才初始化"的顺序加载：eza 别名 → PSReadLine（历史搜索 / 预测 / Tab 菜单补全）→ zoxide（接管 `cd`）→ oh-my-posh（提示符）。任何一项缺失都不会让 shell 启动失败。
+`profile.ps1` 内部按"工具存在才初始化"的顺序加载：eza 别名 → PSReadLine（历史搜索 / 预测 / Tab 菜单补全）→ zoxide（接管 `cd`）→ oh-my-posh（提示符）→ 定义 `y` / `yg` / `gw` wrapper（依赖 yazi / glow，与 Unix `env.sh` 对齐）。任何一项缺失都不会让 shell 启动失败。
 
 注入的 managed block 形如：
 
@@ -132,7 +132,7 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 .\scripts\win11\verify.ps1
 ```
 
-脚本检查 PowerShell 版本、命令与版本、`rmux` 键位、`ll` 别名、`$PROFILE` 中 `profile.ps1` 的加载行、PSReadLine / zoxide / oh-my-posh 的配置链接与目录，逐项列出 PASS / FAIL；有失败项时退出码为 1。
+脚本检查 PowerShell 版本、命令与版本、`rmux` 键位、`ll` 别名、`$PROFILE` 中 `profile.ps1` 的加载行、PSReadLine / zoxide / oh-my-posh 的配置链接与目录，以及 `y` / `yg` / `gw` wrapper 是否已定义（仅在对应工具已安装时检查），逐项列出 PASS / FAIL；有失败项时退出码为 1。
 
 脚本无法覆盖的交互项，手动确认：
 
@@ -141,6 +141,7 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 - `glow README.md` 应以渲染后的 Markdown 输出。
 - 输入 `ll` 应显示带图标的长列表（脚本已检查别名存在）。
 - 输入 `z <关键词>` 能跳转常用目录、`zi` 能用 fzf 交互选择；上下键按前缀搜历史、Tab 弹出补全菜单、输入时显示灰色预测。
+- 输入 `y` 浏览目录后按 `q` 退出，应自动 `cd` 到该目录（按 `Q` 不切换）；`yg` 选文件退出后应以 glow 精读；`gw README.md` 应按当前终端宽度渲染。
 
 **排错**
 
