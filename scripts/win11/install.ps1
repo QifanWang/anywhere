@@ -79,12 +79,36 @@ foreach ($item in $plan) {
 Write-Host "`n==> Multiplexer"
 Write-Host "  win11 使用 RMUX（原生 ConPTY，无需 WSL）；tmux 仅保留给其他平台"
 
-Write-Host "`n==> Shell integration"
+Write-Host "`n==> Shell integration (PSReadLine)"
 $psrl = Get-Module -ListAvailable PSReadLine | Select-Object -First 1
 if ($psrl) {
     Write-Host ("  PSReadLine {0}: OK（PowerShell 7 内置）" -f $psrl.Version)
 } else {
     Write-Host "  PSReadLine: NOT FOUND（历史搜索 / 预测不可用）"
+}
+
+# PSReadLine 插件与 fzf 集成没有 winget 包，只能经 PSGallery 安装。
+$hasInstallModule = [bool](Get-Command Install-Module -ErrorAction SilentlyContinue)
+foreach ($item in @(
+        @{ Label = "CompletionPredictor"; Reason = "补全预测插件" },
+        @{ Label = "PSFzf"; Reason = "Ctrl+R 模糊历史搜索" }
+    )) {
+    $module = Get-Module -ListAvailable $item.Label | Sort-Object Version -Descending | Select-Object -First 1
+    if ($module) {
+        Write-Host ("  {0} {1}: OK（已安装；升级用 Update-Module {0}）" -f $item.Label, $module.Version)
+        continue
+    }
+    if (-not $hasInstallModule) {
+        Write-Host ("  {0}: SKIP（未找到 Install-Module，请安装 PowerShellGet）" -f $item.Label)
+        continue
+    }
+    Write-Host ("  {0}: 未安装，从 PSGallery 安装（{1}）" -f $item.Label, $item.Reason)
+    try {
+        Install-Module -Name $item.Label -Scope CurrentUser -Force -AllowClobber -Repository PSGallery -ErrorAction Stop
+        Write-Host ("  {0}: OK（安装完成）" -f $item.Label)
+    } catch {
+        Write-Warning ("  {0}: 安装失败 - {1}" -f $item.Label, $_.Exception.Message)
+    }
 }
 
 Write-Host "`n==> Verification"

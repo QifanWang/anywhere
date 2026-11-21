@@ -8,14 +8,14 @@
 | --- | --- |
 | 系统 | Windows 11 |
 | 关键约束 | winget 可用但需大陆镜像；终端复用器走原生 ConPTY，不依赖 WSL / MSYS2 |
-| 策略 | 统一用 winget；`bootstrap.ps1` 负责配置链接与 PATH 补齐 |
+| 策略 | 外部 CLI 统一用 winget；PowerShell 模块（CompletionPredictor / PSFzf）走 PSGallery；`bootstrap.ps1` 负责配置链接与 PATH 补齐 |
 | 代理 | 本地代理需监听 `http://127.0.0.1:7890`；`prepare.ps1` 在当前会话设置 `HTTP_PROXY` / `HTTPS_PROXY` |
 
-前提：PowerShell 7 已安装（脚本本身依赖它运行，不纳入安装范围）。PowerShell 7 自带 PSReadLine 模块（2.2.6+ 默认启用预测），历史搜索与输入提示由它承担，不需要单独安装。
+前提：PowerShell 7 已安装（脚本本身依赖它运行，不纳入安装范围）。PowerShell 7 自带 PSReadLine 模块，历史搜索与输入提示由它承担，不需要单独安装。补全预测与 fzf 历史搜索由 PSGallery 模块 CompletionPredictor、PSFzf 提供，见 §3.2。
 
 代理要求：安装前需在本机启动代理客户端并监听 `http://127.0.0.1:7890`（HTTP 代理）。`prepare.ps1` 会在当前 PowerShell 会话中设置 `$env:HTTP_PROXY` 与 `$env:HTTPS_PROXY`；若代理未启动，winget 下载可能失败，可在同一会话用 `Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY` 清除后重试。
 
-包管理器统一用 winget：Windows 11 内置、可用脚本静默安装，便于在新设备上复现完全一致的软件清单。终端用 Windows Terminal。两者的安装与配置见 §3.1。
+外部 CLI 统一用 winget：Windows 11 内置、可用脚本静默安装，便于复现软件清单。终端用 Windows Terminal，安装与配置见 §3.1。例外是 PSReadLine 的插件生态：CompletionPredictor 与 PSFzf 只发布在 PSGallery，由 `install.ps1` 经 `Install-Module` 安装（见 §3.2）。
 
 ## 2. 工具与功能
 
@@ -25,7 +25,7 @@
 | --- | --- | --- | --- | --- |
 | Shell（PowerShell 7） | 命令执行环境 | 前提已装 | `../config/shell/profile.ps1` | 每个平台唯一；脚本运行环境，不纳入安装范围；交互配置见 §3.2 |
 | 字体（Nerd Font） | 终端图标渲染与提示符字形 | 手动下载 | Windows Terminal 字体设置 | 例如 FiraCode Nerd Font；作用于终端而非 Shell，`install.ps1` 不负责字体 |
-| PSReadLine | 历史搜索与输入提示 | PowerShell 7 内置模块 | `../config/shell/profile.ps1` | 上下键前缀搜索、Tab 菜单补全、基于历史的预测；版本随 PowerShell 7 |
+| PSReadLine | 历史搜索与输入提示 | PowerShell 7 内置模块 | `../config/shell/profile.ps1` | 上下键前缀搜索、Tab 菜单补全、`HistoryAndPlugin` 预测 + `ListView`；版本随 PowerShell 7 |
 | oh-my-posh | 提示符 | `JanDeDobbeleer.OhMyPosh` | `../config/oh-my-posh/anywhere.omp.json` | 主题与 yazi 同为 Catppuccin 风格；需要 Nerd Font |
 | zoxide | 目录跳转 | `ajeetdsouza.zoxide` | `../config/shell/profile.ps1` | `z <关键词>` 直达，`zi` 交互选择（复用 fzf）；接管 `cd` |
 | RMUX | 终端复用、会话保持 | `Helvesec.RMUX` | `../config/rmux/rmux.conf` | 原生 ConPTY；命令见 `cheatsheet/rmux.md` |
@@ -34,13 +34,16 @@
 | yazi | 文件管理、预览 | `sxyazi.yazi` | `../config/yazi/` | `g f` / `g i` / `g v` 为 Unix 专用；markdown 的 `o` 精读走 `scripts/glow.ps1 -Pager` 全屏分页（`q` 回 yazi） |
 | helix | 模态编辑器（`EDITOR`） | `Helix.Helix` | `../config/helix/config.toml` | 命令为 `hx` |
 | fd | 文件查找 | `sharkdp.fd` | — | 无配置文件 |
-| fzf | 模糊搜索 | `junegunn.fzf` | — | 无配置文件；`yazi` 的 `z` 与 zoxide 的 `zi` 都依赖它 |
+| fzf | 模糊搜索 | `junegunn.fzf` | — | 无配置文件；`yazi` 的 `z`、zoxide 的 `zi`、PSFzf 的 `Ctrl+R` 都依赖它 |
 | lazygit | Git 面板 | `JesseDuffield.lazygit` | — | 无配置文件 |
+| CompletionPredictor | PSReadLine 补全预测插件 | PSGallery：`Install-Module CompletionPredictor` | PowerShell 子系统插件，无配置文件 | 需 PowerShell 7.2+ / PSReadLine 2.2.2+；由 `profile.ps1` 导入，叠加到 `HistoryAndPlugin` |
+| PSFzf | Ctrl+R 模糊历史搜索 | PSGallery：`Install-Module PSFzf` | — | 依赖 fzf 二进制；由 `profile.ps1` 把 `Ctrl+R` 绑定为 `Invoke-FzfReverseHistory` |
 
 本地注意事项：
 
-- Shell 交互四项各有归属：**历史搜索 / 输入提示**用 PowerShell 7 内置的 PSReadLine；**提示符**用 oh-my-posh；**目录跳转**用 zoxide；**eza 别名**沿用 `config/eza/aliases.ps1`。四项由 `../config/shell/profile.ps1` 统一加载，用户 `$PROFILE` 只需一行 dot-source（见 §3.2）。同一文件还提供 `y` / `yg` / `gw` 三个 yazi wrapper，与 Unix 的 `env.sh` 对齐。
-- PSReadLine 随 PowerShell 7 分发，不通过 winget 安装，也不纳入 `install.ps1` 的清单；只需确认版本 ≥ 2.2.6（预测默认开启）。
+- Shell 交互四项各有归属：**历史搜索 / 输入提示**用 PowerShell 7 内置的 PSReadLine + PSGallery 插件；**提示符**用 oh-my-posh；**目录跳转**用 zoxide；**eza 别名**沿用 `config/eza/aliases.ps1`。四项由 `../config/shell/profile.ps1` 统一加载，用户 `$PROFILE` 只需一行 dot-source（见 §3.2）。同一文件还提供 `y` / `yg` / `gw` 三个 yazi wrapper，与 Unix 的 `env.sh` 对齐。
+- PSReadLine 随 PowerShell 7 分发，不通过 winget 安装，也不纳入 winget 清单。两个增强模块 CompletionPredictor（补全预测）与 PSFzf（Ctrl+R 模糊历史搜索）从 PSGallery 安装，由 `install.ps1` 的 Shell integration 段经 `Install-Module -Scope CurrentUser` 装上；已安装时会跳过，升级用 `Update-Module`。`PredictionSource` 默认是 `None`，预测实际由 `profile.ps1` 设置，并非「2.2.6+ 默认开启」。
+- `ListView` 下按 `F2` 可在列表/行内视图间切换，`F4` 显示完整 tooltip；上下键在前缀历史搜索与预测列表导航间共用。`Ctrl+R` 由 PSFzf 接管为 fzf 模糊搜索；插件或 fzf 缺失时自动退回内置行为（历史预测 / 内置反向搜索），不会让 shell 启动失败。
 - RMUX 配置查找顺序：`%XDG_CONFIG_HOME%\rmux\rmux.conf` → `%USERPROFILE%\.rmux.conf` → `%APPDATA%\rmux\rmux.conf` → `%RMUX_CONFIG_FILE%`。本仓库提供原生 `rmux.conf`，不会回退到 `tmux.conf`。
 - `yazi` 的 `g f` / `g i` / `g v` 在 keymap 中声明 `for = "unix"`，win11 下不显示；`z` 模糊搜索依赖 fzf 二进制。
 - markdown 的 `o` 精读与光标预览在 win11 走 `config/yazi/scripts/glow.ps1`（由 `pwsh` 调用，不依赖 sh / sed / less）：预览用默认输出模式供 yazi 读取，`o` 用 `-Pager` 全屏分页（`space/f` 下一页、`b` 上一页、`j/k` 单行、`q` 退出），对应 Unix 的 `less -R`。脚本显式固定 UTF-8，避免从 `cmd /C` 启动时中文乱码。hx opener 已取消平台限制；该脚本随整个 `config/yazi/` 目录一起链接。
@@ -73,6 +76,15 @@
 
 脚本可重复运行：已安装的包会自动检查升级；若已是最新版（winget 返回 `0x8A15002B`），视为成功而不是失败。`install.ps1` 只检查 winget 是否存在，镜像源由 `prepare.ps1` 负责；它安装在 §2 列出的全部 winget 工具（含 helix、fd、fzf、lazygit、zoxide、oh-my-posh），但不安装字体，也不安装 PSReadLine（PowerShell 7 内置）。
 
+同一脚本末尾还会经 PSGallery 安装两个 PSReadLine 增强模块（PSGallery 是例外，不纳入 winget）：
+
+```powershell
+Install-Module -Name CompletionPredictor -Scope CurrentUser -Force -Repository PSGallery
+Install-Module -Name PSFzf              -Scope CurrentUser -Force -Repository PSGallery
+```
+
+已安装则跳过；手动安装/升级用上面的命令或 `Update-Module CompletionPredictor, PSFzf`。PSGallery 走 HTTPS，若下载受限需在当前会话设置与 §3.1 相同的代理环境变量（或先运行 `prepare.ps1` 以继承代理）。`CompletionPredictor` 要求 PowerShell 7.2+ 与 PSReadLine 2.2.2+；`PSFzf` 依赖 winget 装的 `fzf` 在 PATH 中。
+
 若从 GitHub Release 手动解压 RMUX，必须保持 `rmux.exe`、`rmux-daemon.exe` 与 `libexec/rmux/rmux.exe` 的相对结构，并把包根目录加入 `PATH`；只复制外层 `rmux.exe` 不算完整安装。排查 CLI 兼容问题可设置 `$env:RMUX_DISABLE_TINY_CLI = 1`。
 
 **配置链接**
@@ -95,7 +107,7 @@
 - 在 `$PROFILE.CurrentUserAllHosts` 中**幂等注入**一行 dot-source（带 marker，重复运行不会叠加）；若任一 profile 变体已有引用则跳过
 - 支持 `-SkipProfile` 完全跳过 profile 修改，`-ProfileTarget` 指定注入到其它变体，`-WhatIf` 预览改动
 
-`profile.ps1` 内部按"工具存在才初始化"的顺序加载：eza 别名 → PSReadLine（历史搜索 / 预测 / Tab 菜单补全）→ zoxide（接管 `cd`）→ oh-my-posh（提示符）→ 定义 `y` / `yg` / `gw` wrapper（依赖 yazi / glow，与 Unix `env.sh` 对齐）。任何一项缺失都不会让 shell 启动失败。
+`profile.ps1` 内部按"工具存在才初始化"的顺序加载：eza 别名 → PSReadLine（前缀历史搜索 / Tab 菜单补全 / `HistoryAndPlugin` + `ListView` 预测 / PSFzf 接管 `Ctrl+R`）→ zoxide（接管 `cd`）→ oh-my-posh（提示符）→ 定义 `y` / `yg` / `gw` wrapper（依赖 yazi / glow，与 Unix `env.sh` 对齐）。任何一项缺失都不会让 shell 启动失败。
 
 注入的 managed block 形如：
 
@@ -133,7 +145,7 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 .\scripts\win11\verify.ps1
 ```
 
-脚本检查 PowerShell 版本、命令与版本、`rmux` 键位、`ll` 别名、`$PROFILE` 中 `profile.ps1` 的加载行、PSReadLine / zoxide / oh-my-posh 的配置链接与目录，以及 `y` / `yg` / `gw` wrapper 是否已定义（仅在对应工具已安装时检查），逐项列出 PASS / FAIL；有失败项时退出码为 1。
+脚本检查 PowerShell 版本、命令与版本、`rmux` 键位、`ll` 别名、`$PROFILE` 中 `profile.ps1` 的加载行、PSReadLine / zoxide / oh-my-posh 的初始化状态与配置链接目录，以及 `y` / `yg` / `gw` wrapper 是否已定义（仅在对应工具已安装时检查）。新增的 PSReadLine 检查包括 `CompletionPredictor` / `PSFzf` 是否已加载、`PredictionSource` 是否为 `HistoryAndPlugin`、`PredictionViewStyle` 是否为 `ListView`、`Ctrl+R` 是否交给 PSFzf。逐项列出 PASS / FAIL；有失败项时退出码为 1。
 
 脚本无法覆盖的交互项，手动确认：
 
@@ -141,7 +153,9 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 - `yazi` 启动后按 `~` 查看帮助，确认图标正常（Nerd Font 生效）；提示符应显示 oh-my-posh 的 git 分支与路径。
 - `glow README.md` 应以渲染后的 Markdown 输出；在 yazi 里把光标移到 `.md` 文件，预览 pane 应显示 glow 渲染结果；按 `o` 应进入**全屏分页**的精读界面（底部有 `-- More --` 提示），`space` 翻页、`q` 退出回到 yazi，而不是把文本直接打印到终端。
 - 输入 `ll` 应显示带图标的长列表（脚本已检查别名存在）。
-- 输入 `z <关键词>` 能跳转常用目录、`zi` 能用 fzf 交互选择；上下键按前缀搜历史、Tab 弹出补全菜单、输入时显示灰色预测。
+- 输入 `z <关键词>` 能跳转常用目录、`zi` 能用 fzf 交互选择。
+- 输入命令前缀后上下键按前缀搜历史、Tab 弹出补全菜单；输入时在下方出现 fish 风格下拉预测列表（`F2` 切换显隐、方向键选择、`F4` 看完整 tooltip），历史与补全建议混合显示。
+- 按 `Ctrl+R` 应弹出 fzf 交互界面模糊搜索历史，选中后回填命令行；`q` / `Esc` 取消。插件缺失时会退回内置的反向增量搜索。
 - 输入 `y` 浏览目录后按 `q` 退出，应自动 `cd` 到该目录（按 `Q` 不切换）；`yg` 选文件退出后应以 glow 精读；`gw README.md` 应按当前终端宽度渲染。
 
 **排错**
@@ -153,5 +167,8 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 5. **下载超时且镜像已配置**：确认本地代理 `127.0.0.1:7890` 正在监听；若代理未运行，可在当前会话执行 `Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY` 后重试。
 6. **`z` / `zi` 不生效**：确认 `$PROFILE` 已加载 `profile.ps1`（脚本会检查该行）；`zi` 还需 fzf 在 PATH 中。zoxide 接管 `cd` 后，原生 `cd` 的语义仍保留，只是额外记录访问历史。
 7. **提示符没有颜色 / 图标乱码**：Windows Terminal 需配置 Nerd Font；oh-my-posh 主题读取 `XDG_CONFIG_HOME\oh-my-posh\anywhere.omp.json`，可用 `oh-my-posh config export --output -` 排查。
-8. **历史搜索无预测**：确认 PSReadLine 版本（`Get-Module PSReadLine | Select-Object Version`），低于 2.2.6 时预测不会默认开启，可 `Update-Module PSReadLine` 后重开终端。
-9. **yazi 里 `o` 不用 glow 渲染**：确认 `%APPDATA%\yazi\config\scripts\glow.ps1` 存在（bootstrap 链接整个 `config/yazi/` 目录，旧配置需重跑一次）；再手动试 `pwsh -NoProfile -File "%APPDATA%\yazi\config\scripts\glow.ps1" <某个 md 文件>`，能输出带颜色文本即脚本与 glow 正常，问题在 yazi 配置未刷新。
+8. **输入预测不生效 / 没有下拉列表**：先确认是在**交互式**终端运行——输出被重定向（管道 / 自动化捕获）时 PSReadLine 会拒绝启用预测，`verify.ps1` 会给出提示并把相关项标为 FAIL，需到真实终端复核。再确认 `profile.ps1` 已加载（脚本会检查）且 `PredictionSource` 为 `HistoryAndPlugin`、`PredictionViewStyle` 为 `ListView`。用 `Get-Module PSReadLine | Select-Object Version` 确认版本 ≥ 2.2.2；旧版本上这两个选项会抛错并被 profile 的 try/catch 降级。`CompletionPredictor` 缺失时只会退化为纯 `History` 预测，不会报错。
+9. **补全预测没有内容**：`CompletionPredictor` 需 PowerShell 7.2+ 且已由 profile 导入；用 `Get-Module CompletionPredictor` 确认。它是 PowerShell 子系统插件，重开终端后才注册。
+10. **`Ctrl+R` 仍是内置反向搜索**：确认 `PSFzf` 已加载（`Get-Module PSFzf`）且 `fzf` 在 PATH（`Get-Command fzf`），缺一即保留内置键位。用 `Get-PSReadLineKeyHandler -Chord 'Ctrl+r'` 查看，接管后应显示 `fzf 反向历史搜索`。
+11. **yazi 里 `o` 不用 glow 渲染**：确认 `%APPDATA%\yazi\config\scripts\glow.ps1` 存在（bootstrap 链接整个 `config/yazi/` 目录，旧配置需重跑一次）；再手动试 `pwsh -NoProfile -File "%APPDATA%\yazi\config\scripts\glow.ps1" <某个 md 文件>`，能输出带颜色文本即脚本与 glow 正常，问题在 yazi 配置未刷新。
+12. **PSGallery 安装失败**：确认 PSGallery 已注册（`Get-PSRepository PSGallery`）；下载超时需按 §3.1 设置代理，或手动运行 §3.2 的两条 `Install-Module`。

@@ -92,6 +92,41 @@ if ($psrl) {
 } else {
     Add-Result "PSReadLine" $false "未加载（需 PowerShell 7）"
 }
+
+# PSReadLine 智能预测：CompletionPredictor 插件 + HistoryAndPlugin + ListView + PSFzf 接管 Ctrl+R
+$predictor = Get-Module CompletionPredictor -ErrorAction SilentlyContinue
+if ($predictor) {
+    Add-Result "CompletionPredictor" $true ([string]$predictor.Version)
+} else {
+    Add-Result "CompletionPredictor" $false "未加载；检查 PSGallery 安装并重开终端"
+}
+$psfzf = Get-Module PSFzf -ErrorAction SilentlyContinue
+if ($psfzf) {
+    Add-Result "PSFzf" $true ([string]$psfzf.Version)
+} else {
+    Add-Result "PSFzf" $false "未加载；检查 PSGallery 安装并重开终端"
+}
+if ($psrl) {
+    # PSReadLine 在输出被重定向（自动化 / 管道捕获）时会拒绝启用预测，
+    # 此时以下三项必然 FAIL，提示用户到交互终端复核，避免误判为配置错误。
+    if ([Console]::IsOutputRedirected) {
+        Write-Host "  (提示) 当前会话输出被重定向，PSReadLine 不启用预测；预测相关项请在交互终端复核。"
+    }
+    $opt = Get-PSReadLineOption
+    $source = [string]$opt.PredictionSource
+    $view = [string]$opt.PredictionViewStyle
+    Add-Result "PredictionSource" ($source -eq "HistoryAndPlugin") $source
+    Add-Result "PredictionViewStyle" ($view -eq "ListView") $view
+
+    $ctrlR = @(Get-PSReadLineKeyHandler -Chord 'Ctrl+r' -ErrorAction SilentlyContinue)
+    $fzfBound = @($ctrlR | Where-Object { $_.Function -match '(?i)fzf' -or $_.Description -match '(?i)fzf' })
+    $hasFzfFn = [bool](Get-Command Invoke-FzfReverseHistory -ErrorAction SilentlyContinue)
+    if ($hasFzfFn -and $fzfBound.Count -gt 0) {
+        Add-Result "Ctrl+R -> PSFzf" $true $fzfBound[0].Function
+    } else {
+        Add-Result "Ctrl+R -> PSFzf" $false "仍为内置反向搜索（PSFzf 未加载或键位未接管）"
+    }
+}
 # zoxide 0.10+ 的 init 把 z / zi 注册为别名，底层函数是 __zoxide_z / __zoxide_zi。
 # 原先用 Get-Command z -CommandType Function 判断：既可能命中无关的 z 模块而误判通过，
 # 也会在 zoxide 正常初始化时找不到 z 函数而误判失败，因此直接检查 init 生成的函数。

@@ -18,21 +18,36 @@ if (Test-Path -LiteralPath $ezaAliases) {
     . $ezaAliases
 }
 
-# --- PSReadLine：历史前缀搜索 + 菜单补全 + 基于历史的预测 ---
-# PowerShell 7 内置模块；Set-PSReadLineOption 的预测选项需 >= 2.1，
-# 2.2.6+ 默认开启。低版本用 try/catch 兜底，不影响其余初始化。
+# --- PSReadLine：历史前缀搜索 + 菜单补全 + 插件增强的智能预测 ---
+# PowerShell 7 内置模块；CompletionPredictor（PSGallery）提供基于 AST 的补全预测，
+# 与历史预测合并为 HistoryAndPlugin；ListView 为 fish 风格多选下拉。
+# 插件缺失时自动退化为 History，PSFzf 缺失时保留内置 Ctrl+R，均不影响 shell 启动。
 if (Get-Module -ListAvailable PSReadLine) {
     Import-Module PSReadLine
 
-    Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward
-    Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
-    Set-PSReadLineKeyHandler -Key Tab       -Function MenuComplete
+    Set-PSReadLineKeyHandler -Chord UpArrow   -Function HistorySearchBackward
+    Set-PSReadLineKeyHandler -Chord DownArrow -Function HistorySearchForward
+    Set-PSReadLineKeyHandler -Chord Tab       -Function MenuComplete
+
+    # CompletionPredictor 通过 PSSubsystem 注册插件，导入后 Plugin 预测源才生效
+    if (Get-Module -ListAvailable CompletionPredictor -ErrorAction SilentlyContinue) {
+        Import-Module CompletionPredictor -ErrorAction SilentlyContinue
+    }
 
     try {
-        Set-PSReadLineOption -PredictionSource History
-        Set-PSReadLineOption -PredictionViewStyle InlineView
+        Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+        Set-PSReadLineOption -PredictionViewStyle ListView
     } catch {
-        Write-Verbose "PSReadLine 预测不可用（版本偏低）: $($_.Exception.Message)"
+        Write-Verbose "PSReadLine 预测配置不可用（版本偏低）: $($_.Exception.Message)"
+    }
+
+    # PSFzf 接管 Ctrl+R：fzf 模糊搜索历史（依赖 fzf 二进制在 PATH）
+    if ((Get-Module -ListAvailable PSFzf -ErrorAction SilentlyContinue) -and
+        (Get-Command fzf -ErrorAction SilentlyContinue)) {
+        Import-Module PSFzf -ErrorAction SilentlyContinue
+        if (Get-Command Invoke-FzfReverseHistory -ErrorAction SilentlyContinue) {
+            Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -BriefDescription 'fzf 反向历史搜索' -ScriptBlock { Invoke-FzfReverseHistory }
+        }
     }
 }
 
