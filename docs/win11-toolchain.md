@@ -31,7 +31,7 @@
 | RMUX | 终端复用、会话保持 | `Helvesec.RMUX` | `../config/rmux/rmux.conf` | 原生 ConPTY；命令见 `cheatsheet/rmux.md` |
 | eza | 目录列表 | `eza-community.eza` | `../config/eza/aliases.ps1` | 旧 ID `eza.eza` 不存在；别名见 §3.2 |
 | glow | Markdown 阅读 / 预览 | `charmbracelet.glow` | `../config/glow/glow.yml` | v3；非 TTY 走 stdin |
-| yazi | 文件管理、预览 | `sxyazi.yazi` | `../config/yazi/` | `g f` / `g i` / `g v` 为 Unix 专用 |
+| yazi | 文件管理、预览 | `sxyazi.yazi` | `../config/yazi/` | `g f` / `g i` / `g v` 为 Unix 专用；markdown 的 `o` 精读走 `scripts/glow.ps1 -Pager` 全屏分页（`q` 回 yazi） |
 | helix | 模态编辑器（`EDITOR`） | `Helix.Helix` | `../config/helix/config.toml` | 命令为 `hx` |
 | fd | 文件查找 | `sharkdp.fd` | — | 无配置文件 |
 | fzf | 模糊搜索 | `junegunn.fzf` | — | 无配置文件；`yazi` 的 `z` 与 zoxide 的 `zi` 都依赖它 |
@@ -43,6 +43,7 @@
 - PSReadLine 随 PowerShell 7 分发，不通过 winget 安装，也不纳入 `install.ps1` 的清单；只需确认版本 ≥ 2.2.6（预测默认开启）。
 - RMUX 配置查找顺序：`%XDG_CONFIG_HOME%\rmux\rmux.conf` → `%USERPROFILE%\.rmux.conf` → `%APPDATA%\rmux\rmux.conf` → `%RMUX_CONFIG_FILE%`。本仓库提供原生 `rmux.conf`，不会回退到 `tmux.conf`。
 - `yazi` 的 `g f` / `g i` / `g v` 在 keymap 中声明 `for = "unix"`，win11 下不显示；`z` 模糊搜索依赖 fzf 二进制。
+- markdown 的 `o` 精读与光标预览在 win11 走 `config/yazi/scripts/glow.ps1`（由 `pwsh` 调用，不依赖 sh / sed / less）：预览用默认输出模式供 yazi 读取，`o` 用 `-Pager` 全屏分页（`space/f` 下一页、`b` 上一页、`j/k` 单行、`q` 退出），对应 Unix 的 `less -R`。脚本显式固定 UTF-8，避免从 `cmd /C` 启动时中文乱码。hx opener 已取消平台限制；该脚本随整个 `config/yazi/` 目录一起链接。
 
 ## 3. 安装、配置与验证
 
@@ -138,7 +139,7 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 
 - `rmux` 启动后按 `C-b ?` 查看键位；`C-b T` 可切换面板鼠标模式。
 - `yazi` 启动后按 `~` 查看帮助，确认图标正常（Nerd Font 生效）；提示符应显示 oh-my-posh 的 git 分支与路径。
-- `glow README.md` 应以渲染后的 Markdown 输出。
+- `glow README.md` 应以渲染后的 Markdown 输出；在 yazi 里把光标移到 `.md` 文件，预览 pane 应显示 glow 渲染结果；按 `o` 应进入**全屏分页**的精读界面（底部有 `-- More --` 提示），`space` 翻页、`q` 退出回到 yazi，而不是把文本直接打印到终端。
 - 输入 `ll` 应显示带图标的长列表（脚本已检查别名存在）。
 - 输入 `z <关键词>` 能跳转常用目录、`zi` 能用 fzf 交互选择；上下键按前缀搜历史、Tab 弹出补全菜单、输入时显示灰色预测。
 - 输入 `y` 浏览目录后按 `q` 退出，应自动 `cd` 到该目录（按 `Q` 不切换）；`yg` 选文件退出后应以 glow 精读；`gw README.md` 应按当前终端宽度渲染。
@@ -153,3 +154,4 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 6. **`z` / `zi` 不生效**：确认 `$PROFILE` 已加载 `profile.ps1`（脚本会检查该行）；`zi` 还需 fzf 在 PATH 中。zoxide 接管 `cd` 后，原生 `cd` 的语义仍保留，只是额外记录访问历史。
 7. **提示符没有颜色 / 图标乱码**：Windows Terminal 需配置 Nerd Font；oh-my-posh 主题读取 `XDG_CONFIG_HOME\oh-my-posh\anywhere.omp.json`，可用 `oh-my-posh config export --output -` 排查。
 8. **历史搜索无预测**：确认 PSReadLine 版本（`Get-Module PSReadLine | Select-Object Version`），低于 2.2.6 时预测不会默认开启，可 `Update-Module PSReadLine` 后重开终端。
+9. **yazi 里 `o` 不用 glow 渲染**：确认 `%APPDATA%\yazi\config\scripts\glow.ps1` 存在（bootstrap 链接整个 `config/yazi/` 目录，旧配置需重跑一次）；再手动试 `pwsh -NoProfile -File "%APPDATA%\yazi\config\scripts\glow.ps1" <某个 md 文件>`，能输出带颜色文本即脚本与 glow 正常，问题在 yazi 配置未刷新。

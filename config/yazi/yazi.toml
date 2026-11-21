@@ -65,11 +65,13 @@ prepend_fetchers = [
 #   gw / cat 文件 | glow 包装。
 glow = [
   { run = "GLOW_WIDTH=\"$(tput cols)\" glow -s dark - < %s | sed -E 's/\u001B]8;[^\u0007]*\u0007//g; s/\u0007//g' | less -R", desc = "glow", for = "unix", block = true },
+  # Windows: 不依赖 sh/sed/less，由随配置分发的 pwsh 脚本渲染；-Pager 全屏分页，q 退出回 yazi（对齐 Unix 的 less -R）
+  { run = 'pwsh -NoProfile -File "%APPDATA%\yazi\config\scripts\glow.ps1" %s -Pager', desc = "glow", for = "windows", block = true },
 ]
 # helix（block = true：前台交互，:q 退出回 yazi；%s 多文件时 hx 会开多 buffer）
-# linux-fedora 实测：~/.local/bin/hx 源码编译（glibc 2.28 无法用官方包）
+# linux-fedora 为源码编译（glibc 2.28 无法用官方包），win11 由 winget 安装，命令一致，故不限平台
 hx = [
-  { run = "hx %s", desc = "helix", for = "unix", block = true },
+  { run = "hx %s", desc = "helix", block = true },
 ]
 # 跨平台编辑 / 打开（unix 用 $EDITOR / xdg-open；win11 用 VS Code / cmd start）
 # 本机 EDITOR=hx（见 config/shell/env.sh），此处为非交互环境的兜底与 win11 的入口
@@ -89,8 +91,8 @@ open = [
 # 最后一条 text/* 把其他文本的默认动作改为 hx：无 GUI 服务器上内置的
 # reveal（xdg-open）无法运行，会以 "N left" 挂在任务队列
 # prepend_rules 是增量添加（优先于内置默认）；全量覆盖才用 rules = [...]（改写前
-# 必须先复制官方默认规则集）。win11 未实测：glow / hx 为 unix 专属 opener，
-# 如报错可在 use 列表追加 "edit"（VS Code）
+# 必须先复制官方默认规则集）。win11 下 glow / hx 已有对应 opener（见上），
+# 其中 glow 走 config/yazi/scripts/glow.ps1，与预览插件共用同一渲染脚本
 prepend_rules = [
   { mime = "text/markdown", use = [ "glow", "hx" ] },
   { url = "*.md",           use = [ "glow", "hx" ] },

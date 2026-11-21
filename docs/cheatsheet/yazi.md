@@ -72,4 +72,4 @@
 | `g v` | 列出 Git 变更文件（`vcs-files.yazi` 插件的 `vcs://` 虚拟视图） | 仅 Unix（`for = "unix"`） |
 | `z` | 模糊搜索（内置 fzf 插件，候选源为 fd；依赖 fzf 二进制） | 全平台（需 fzf） |
 
-> markdown 文件预览由 glow 插件渲染（目录由 eza 插件树状预览）；`o` 用 glow 精读，`O` 交互选择 glow / hx / edit。shell 侧另有 `y`（退出 yazi 后 cd 到浏览目录）、`yg`（选文件后 glow 精读）、`gw`（按 pane 宽度渲染）三个 wrapper：Unix 见 `../../config/shell/env.sh`，win11 见 `../../config/shell/profile.ps1`（用法见 `powershell.md`）。`g f` / `g i` / `g v` 在 `keymap.toml` 中声明为 `for = "unix"`，win11 不会生效；`z` 依赖 fzf 二进制，而 win11 的 `install.ps1` 未安装 fzf，需自行补装。
+> markdown 文件预览由 glow 插件渲染（目录由 eza 插件树状预览）；`o` 用 glow 精读，`O` 交互选择 glow / hx / edit。win11 下 glow 的 opener 与预览共用 `../../config/yazi/scripts/glow.ps1`，不依赖 sh/sed/less；`o` 走脚本的 `-Pager` 全屏分页模式（对应 Unix 的 `less -R`），`space/f` 下一页、`b` 上一页、`j/k` 单行、`q` 退出回到 yazi；hx opener 为全平台。shell 侧另有 `y`（退出 yazi 后 cd 到浏览目录）、`yg`（选文件后 glow 精读）、`gw`（按 pane 宽度渲染）三个 wrapper：Unix 见 `../../config/shell/env.sh`，win11 见 `../../config/shell/profile.ps1`（用法见 `powershell.md`）。`g f` / `g i` / `g v` 在 `keymap.toml` 中声明为 `for = "unix"`，win11 不会生效；`z` 依赖 fzf 二进制，win11 已由 `install.ps1` 安装。

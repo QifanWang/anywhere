@@ -39,7 +39,7 @@ functions:
   - role: 文件管理与预览
     win11: yazi
     linux: yazi
-    note: g d / g c 路径按平台分支；g f / g i / g v 仅 Unix
+    note: g d / g c 路径按平台分支；g f / g i / g v 仅 Unix；win11 的 markdown 精读与预览走 config/yazi/scripts/glow.ps1
   - role: 文件查找
     win11: fd
     linux: fd

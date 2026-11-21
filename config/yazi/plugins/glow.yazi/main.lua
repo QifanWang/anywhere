@@ -1,16 +1,17 @@
 -- anywhere: markdown preview rendered by glow
 -- Target yazi: 26.9.1 (Lua previewer API, adapted from built-in json.lua)
 --
--- Two non-obvious points:
+-- Non-obvious points:
 --   1. glow v3 outputs nothing when stdout is NOT a tty and a FILE argument is used.
---      It only renders via stdin, so we must run: glow ... - < 'file'  (hence sh -c).
+--      It only renders via stdin: Unix uses `glow ... - < 'file'` (hence sh -c);
+--      Windows delegates to scripts/glow.ps1, shared with the `glow` opener.
 --   2. `-w 0` renders an empty string; width is clamped to >= 20.
 --   3. `-s dark` forces a colored style, bypassing glow's `notty` auto-style for pipes.
 --      Change to `-s light` if you use a light terminal theme.
 --   4. glow emits OSC 8 hyperlink sequences terminated by BEL (\a, 0x07); yazi's
 --      ANSI parser doesn't understand OSC 8 and renders the leftover BEL as "^G"
---      (visible at long-link line wraps). Strip the whole sequence via sed —
---      the link text is kept and was never clickable in the preview anyway.
+--      (visible at long-link line wraps). Strip the whole sequence — sed on Unix,
+--      -replace in glow.ps1 on Windows; link text is kept but never clickable.
 
 local M = {}
 
@@ -22,16 +23,30 @@ end
 
 function M:peek(job)
   local width = math.max(20, job.area.w - 2)
-  -- \27 = ESC, \7 = BEL (raw bytes fed to sed so sh -c needs no extra quoting)
-  local cmd = string.format(
-    "glow -s dark -w %d - < %s | sed -E 's/\27]8;[^\7]*\7//g; s/\7//g'",
-    width, quote(job.file.path))
+  local child
 
-  local child = Command("sh")
-    :arg({ "-c", cmd })
-    :stdout(Command.PIPED)
-    :stderr(Command.PIPED)
-    :spawn()
+  if os.getenv("OS") == "Windows_NT" then
+    -- Windows 无 sh/sed：用随 config/yazi 分发的脚本，与 glow opener 共用
+    local appdata = os.getenv("APPDATA")
+    if not appdata then return require("code"):peek(job) end
+    local script = appdata .. "\\yazi\\config\\scripts\\glow.ps1"
+    child = Command("pwsh")
+      :arg({ "-NoProfile", "-File", script, tostring(job.file.path), tostring(width) })
+      :stdout(Command.PIPED)
+      :stderr(Command.PIPED)
+      :spawn()
+  else
+    -- \27 = ESC, \7 = BEL (raw bytes fed to sed so sh -c needs no extra quoting)
+    local cmd = string.format(
+      "glow -s dark -w %d - < %s | sed -E 's/\27]8;[^\7]*\7//g; s/\7//g'",
+      width, quote(job.file.path))
+
+    child = Command("sh")
+      :arg({ "-c", cmd })
+      :stdout(Command.PIPED)
+      :stderr(Command.PIPED)
+      :spawn()
+  end
 
   -- glow missing / failed to spawn: fall back to yazi's built-in code previewer
   if not child then
