@@ -89,18 +89,18 @@ Install-Module -Name PSFzf              -Scope CurrentUser -Force -Repository PS
 
 若从 GitHub Release 手动解压 RMUX，必须保持 `rmux.exe`、`rmux-daemon.exe` 与 `libexec/rmux/rmux.exe` 的相对结构，并把包根目录加入 `PATH`；只复制外层 `rmux.exe` 不算完整安装。排查 CLI 兼容问题可设置 `$env:RMUX_DISABLE_TINY_CLI = 1`。
 
-**快速启动 rmux 会话**
+**快速新建命名 window**
 
-`start-rmux.ps1` 一键开一个**命名** rmux 会话：新建 Windows Terminal 窗口、**左右分屏**两个面板、并 attach 进去。会话名不能含空白；同名会话已存在时会报错（先 `rmux kill-session -t <name>` 或换名）。
+`start-rmux.ps1` 在**当前 rmux 会话内**新建一个**命名 window**（名字显示在 rmux 状态栏）、**左右分屏**两个面板，并切到该 window。前提是先进入 rmux 会话（脚本靠 `RMUX`/`TMUX` 环境变量判断）。`-Name` 是 window 名（可含空格），rmux 对 `-n` 命名的 window 会自动关掉 `automatic-rename`，名字持久。
 
 ```powershell
-.\scripts\win11\start-rmux.ps1                      # 会话名 dev，起始目录 = 当前目录
-.\scripts\win11\start-rmux.ps1 -Name work            # 命名会话 work
-.\scripts\win11\start-rmux.ps1 -Name demo -Directory D:\proj -Title "Demo"
-.\scripts\win11\start-rmux.ps1 -Name dev -NoWindow   # 不开新窗口，在当前终端 attach（无 wt 时）
+.\scripts\win11\start-rmux.ps1                      # 新 window 名 dev，起始目录 = 当前目录
+.\scripts\win11\start-rmux.ps1 -Name work            # window 名 work
+.\scripts\win11\start-rmux.ps1 -Name demo -Directory D:\proj
+.\scripts\win11\start-rmux.ps1 -Name demo -NewTerminalWindow   # 另开 Windows Terminal 窗口接入（默认不另开）
 ```
 
-脚本先在后台创建 detached 会话并分屏，再用 `wt -w new new-tab --title ... pwsh -Command "rmux attach -t <name>"` 在新窗口接入，因此 attach 命令无复杂转义。需要终端复用器基础键位见 `cheatsheet/rmux.md`。
+脚本用 `new-window -d -P -F '#{window_id}' -t <当前session> -n <name>` 建窗并取回 window id，分屏后 `select-window` 把它设为 active window——这样默认路径当前客户端直接停在新 window；`-NewTerminalWindow` 时新开的终端窗口 attach 后也落在它上面。需要终端复用器基础键位见 `cheatsheet/rmux.md`。
 
 **配置链接**
 

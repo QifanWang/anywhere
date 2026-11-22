@@ -24,11 +24,12 @@ win11 使用 **RMUX**，不使用 tmux。RMUX 是原生 Windows 终端复用器�
 | `rmux list-commands` | 列出全部命令 |
 | `rmux -V` | 查看版本 |
 
-一键开命名会话（新窗口 + 左右分屏）用仓库脚本，见 `../../scripts/win11/start-rmux.ps1`：
+在当前 rmux 会话内一键新建**命名 window + 左右分屏**（默认不另开终端窗口），见 `../../scripts/win11/start-rmux.ps1`：
 
 ```powershell
-.\scripts\win11\start-rmux.ps1 -Name work          # 新窗口、左右分屏、命名 work
-.\scripts\win11\start-rmux.ps1 -Name dev -NoWindow  # 不开新窗口，当前终端 attach
+.\scripts\win11\start-rmux.ps1 -Name work                       # 新 window 名 work、左右分屏，切过去
+.\scripts\win11\start-rmux.ps1 -Name demo -Directory D:\proj     # 指定起始目录
+.\scripts\win11\start-rmux.ps1 -Name demo -NewTerminalWindow     # 另开 Windows Terminal 窗口接入
 ```
 
 RMUX 还提供面向脚本的信号原语：
