@@ -42,11 +42,16 @@ if (Get-Module -ListAvailable PSReadLine) {
     }
 
     # PSFzf 接管 Ctrl+R：fzf 模糊搜索历史（依赖 fzf 二进制在 PATH）
+    # PSFzf 2.7.x 用 Set-PsFzfOption 绑定，处理函数为 Invoke-FzfPsReadlineHandlerHistory
     if ((Get-Module -ListAvailable PSFzf -ErrorAction SilentlyContinue) -and
         (Get-Command fzf -ErrorAction SilentlyContinue)) {
         Import-Module PSFzf -ErrorAction SilentlyContinue
-        if (Get-Command Invoke-FzfReverseHistory -ErrorAction SilentlyContinue) {
-            Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -BriefDescription 'fzf 反向历史搜索' -ScriptBlock { Invoke-FzfReverseHistory }
+        if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+            try {
+                Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r' -ErrorAction Stop
+            } catch {
+                Write-Verbose "PSFzf Ctrl+R 绑定失败: $($_.Exception.Message)"
+            }
         }
     }
 }

@@ -120,7 +120,7 @@ if ($psrl) {
 
     $ctrlR = @(Get-PSReadLineKeyHandler -Chord 'Ctrl+r' -ErrorAction SilentlyContinue)
     $fzfBound = @($ctrlR | Where-Object { $_.Function -match '(?i)fzf' -or $_.Description -match '(?i)fzf' })
-    $hasFzfFn = [bool](Get-Command Invoke-FzfReverseHistory -ErrorAction SilentlyContinue)
+    $hasFzfFn = [bool](Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue)
     if ($hasFzfFn -and $fzfBound.Count -gt 0) {
         Add-Result "Ctrl+R -> PSFzf" $true $fzfBound[0].Function
     } else {

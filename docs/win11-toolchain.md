@@ -37,7 +37,7 @@
 | fzf | 模糊搜索 | `junegunn.fzf` | — | 无配置文件；`yazi` 的 `z`、zoxide 的 `zi`、PSFzf 的 `Ctrl+R` 都依赖它 |
 | lazygit | Git 面板 | `JesseDuffield.lazygit` | — | 无配置文件 |
 | CompletionPredictor | PSReadLine 补全预测插件 | PSGallery：`Install-Module CompletionPredictor` | PowerShell 子系统插件，无配置文件 | 需 PowerShell 7.2+ / PSReadLine 2.2.2+；由 `profile.ps1` 导入，叠加到 `HistoryAndPlugin` |
-| PSFzf | Ctrl+R 模糊历史搜索 | PSGallery：`Install-Module PSFzf` | — | 依赖 fzf 二进制；由 `profile.ps1` 把 `Ctrl+R` 绑定为 `Invoke-FzfReverseHistory` |
+| PSFzf | Ctrl+R 模糊历史搜索 | PSGallery：`Install-Module PSFzf` | — | 依赖 fzf 二进制；由 `profile.ps1` 经 `Set-PsFzfOption -PSReadlineChordReverseHistory` 接管 `Ctrl+R` |
 
 本地注意事项：
 
@@ -169,6 +169,6 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 7. **提示符没有颜色 / 图标乱码**：Windows Terminal 需配置 Nerd Font；oh-my-posh 主题读取 `XDG_CONFIG_HOME\oh-my-posh\anywhere.omp.json`，可用 `oh-my-posh config export --output -` 排查。
 8. **输入预测不生效 / 没有下拉列表**：先确认是在**交互式**终端运行——输出被重定向（管道 / 自动化捕获）时 PSReadLine 会拒绝启用预测，`verify.ps1` 会给出提示并把相关项标为 FAIL，需到真实终端复核。再确认 `profile.ps1` 已加载（脚本会检查）且 `PredictionSource` 为 `HistoryAndPlugin`、`PredictionViewStyle` 为 `ListView`。用 `Get-Module PSReadLine | Select-Object Version` 确认版本 ≥ 2.2.2；旧版本上这两个选项会抛错并被 profile 的 try/catch 降级。`CompletionPredictor` 缺失时只会退化为纯 `History` 预测，不会报错。
 9. **补全预测没有内容**：`CompletionPredictor` 需 PowerShell 7.2+ 且已由 profile 导入；用 `Get-Module CompletionPredictor` 确认。它是 PowerShell 子系统插件，重开终端后才注册。
-10. **`Ctrl+R` 仍是内置反向搜索**：确认 `PSFzf` 已加载（`Get-Module PSFzf`）且 `fzf` 在 PATH（`Get-Command fzf`），缺一即保留内置键位。用 `Get-PSReadLineKeyHandler -Chord 'Ctrl+r'` 查看，接管后应显示 `fzf 反向历史搜索`。
+10. **`Ctrl+R` 仍是内置反向搜索**：确认 `PSFzf` 已加载（`Get-Module PSFzf`）且 `fzf` 在 PATH（`Get-Command fzf`），缺一即保留内置键位。用 `Get-PSReadLineKeyHandler -Chord 'Ctrl+r'` 查看，接管后 `Function` 应为 `Fzf Reverse History Select`。也可用 `Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r'` 手动绑定。
 11. **yazi 里 `o` 不用 glow 渲染**：确认 `%APPDATA%\yazi\config\scripts\glow.ps1` 存在（bootstrap 链接整个 `config/yazi/` 目录，旧配置需重跑一次）；再手动试 `pwsh -NoProfile -File "%APPDATA%\yazi\config\scripts\glow.ps1" <某个 md 文件>`，能输出带颜色文本即脚本与 glow 正常，问题在 yazi 配置未刷新。
 12. **PSGallery 安装失败**：确认 PSGallery 已注册（`Get-PSRepository PSGallery`）；下载超时需按 §3.1 设置代理，或手动运行 §3.2 的两条 `Install-Module`。
