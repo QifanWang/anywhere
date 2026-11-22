@@ -105,11 +105,20 @@ function Invoke-AnywhereGlow {
 }
 
 # y: 退出 yazi 后 cd 到浏览目录（按 Q 退出则不切换）
+# 注意：PowerShell 的 Set-Location 不改进程原生 cwd（native GetCurrentDirectory 仍是
+# shell 启动目录），原生 exe 继承的是后者。因此必须把 PS location 作为 ENTRY 显式传给
+# yazi，否则 yazi 总会从 shell 最初的启动目录（而非当前 cd 的目录）开始。
 if (Get-Command yazi -ErrorAction SilentlyContinue) {
     function y {
         $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("yazi-cwd-{0}.tmp" -f [guid]::NewGuid().ToString('N'))
         try {
-            yazi @args "--cwd-file=$tmp"
+            if ($args.Count -gt 0) {
+                $entries = @($args)
+            } else {
+                $loc = (Get-Location).ProviderPath
+                $entries = @($loc)
+            }
+            yazi @entries "--cwd-file=$tmp"
             $cwd = Get-Content -LiteralPath $tmp -Raw -ErrorAction SilentlyContinue
             if ($cwd) { $cwd = $cwd.Trim() }
             $here = (Get-Location).ProviderPath
@@ -128,7 +137,14 @@ if ((Get-Command yazi -ErrorAction SilentlyContinue) -and (Get-Command glow -Err
     function yg {
         $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("yazi-chooser-{0}.tmp" -f [guid]::NewGuid().ToString('N'))
         try {
-            yazi @args "--chooser-file=$tmp"
+            # 与 y 同理：显式传 PS location，避免 yazi 落到 shell 启动目录
+            if ($args.Count -gt 0) {
+                $entries = @($args)
+            } else {
+                $loc = (Get-Location).ProviderPath
+                $entries = @($loc)
+            }
+            yazi @entries "--chooser-file=$tmp"
             $file = if (Test-Path -LiteralPath $tmp) { Get-Content -LiteralPath $tmp -TotalCount 1 -ErrorAction SilentlyContinue }
             if ($file -and (Test-Path -LiteralPath $file -PathType Leaf)) {
                 Invoke-AnywhereGlow $file

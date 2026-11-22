@@ -43,3 +43,5 @@
 | `gw [glow 参数]` | 按当前终端宽度渲染 glow，绕开 v3 的 120 列上限 |
 
 实现差异：Unix 的 `tput cols` 换为 `[Console]::WindowWidth`（失败时回退 `$Host.UI.RawUI.WindowSize.Width`，再失败取 0）；`GLOW_WIDTH` 仅在调用期间临时设置，结束后恢复原值。临时文件用 GUID 命名并总是清理，避免多会话并发冲突。
+
+**起始目录（Windows 特有陷阱）**：PowerShell 的 `Set-Location`/`cd` 只改 PS 的 provider location，**不同步进程原生 cwd**（`[Directory]::GetCurrentDirectory()` 仍是 shell 启动目录）。原生 exe（yazi）继承的是后者，所以若直接 `yazi --cwd-file=...` 不传路径，yazi 会从 shell 最初的启动目录开始，而不是你 `cd` 到的目录——表现为「按 `y` 总是进入固定目录」。Unix bash 的 `cd` 会调 `chdir()`，两者一致，故无此问题。修复：`y` / `yg` 在无显式参数时把 `(Get-Location).ProviderPath` 作为 ENTRY 参数显式传给 yazi（`yazi <path> --cwd-file=...`），有显式参数则尊重它。
