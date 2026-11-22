@@ -24,6 +24,13 @@ win11 使用 **RMUX**，不使用 tmux。RMUX 是原生 Windows 终端复用器�
 | `rmux list-commands` | 列出全部命令 |
 | `rmux -V` | 查看版本 |
 
+一键开命名会话（新窗口 + 左右分屏）用仓库脚本，见 `../../scripts/win11/start-rmux.ps1`：
+
+```powershell
+.\scripts\win11\start-rmux.ps1 -Name work          # 新窗口、左右分屏、命名 work
+.\scripts\win11\start-rmux.ps1 -Name dev -NoWindow  # 不开新窗口，当前终端 attach
+```
+
 RMUX 还提供面向脚本的信号原语：
 
 ```powershell
@@ -78,10 +85,13 @@ rmux capture-pane -p -t ci
 | `C-b ]` | 粘贴 |
 | `Esc` / `q` | 退出复制模式 |
 
+进入复制模式后，状态栏左侧会出现反色的 ` COPY ` 标记（本仓库在 `status-left` 里用 `#{?pane_in_mode,...}` 实现），避免误进后没察觉——尤其在 codebuddy 这类 TUI 里，vi 复制模式的 `g` 是 `history-top`（跳到历史开头），会拦截本要输入程序的 `g` 键。看到 ` COPY ` 就按 `q` / `Esc` 退出再继续操作。
+
 ## 与 tmux 的差异提示
 
 - 原生 Windows 实现（ConPTY + 命名管道），不依赖 WSL 或 MSYS2。
 - 默认前缀 `C-b` 保持不变；出厂默认鼠标为 `off`，但本仓库改设为 `on`（多 panel 滚动所需），可用 `C-b T` 临时切回原生选择。
+- 状态栏配色在配置里统一用 `status-style`（rmux 默认是绿底黑字，单独设 `status-bg` 会被它盖掉），改为 Catppuccin 深底浅字，黑屏幕下更清晰；复制模式另有反色 ` COPY ` 标记。
 - Windows 剪贴板不能用裸 `clip.exe`，否则非 ASCII 字符乱码；本仓库使用显式的 PowerShell UTF-8 命令。
 - 没有自身配置时会回退读取 tmux.conf；本仓库提供原生 `rmux.conf`，不走回退。
 - 配置重载不会清除已删除的旧设置，必要时用 `set -u <option>` 显式清除。
