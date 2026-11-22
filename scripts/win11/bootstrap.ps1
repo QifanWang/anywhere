@@ -279,6 +279,48 @@ function Assert-ToolPath {
     }
 }
 
+function Find-GitFileOne {
+    # yazi 依赖 file(1) 做 MIME 检测；官方推荐用 Git for Windows 自带的 file.exe。
+    $candidates = @()
+    $gitCmd = Get-Command git.exe -ErrorAction SilentlyContinue
+    if ($gitCmd) {
+        # git.exe 常见位置：<Git>\cmd\git.exe 或 <Git>\bin\git.exe，取其上一级作为安装根目录
+        $gitRoot = Split-Path -Parent (Split-Path -Parent $gitCmd.Source)
+        $candidates += Join-Path $gitRoot 'usr\bin\file.exe'
+    }
+    foreach ($dir in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, (Join-Path $env:LOCALAPPDATA 'Programs'))) {
+        if ($dir) { $candidates += Join-Path $dir 'Git\usr\bin\file.exe' }
+    }
+    foreach ($candidate in ($candidates | Select-Object -Unique)) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) { return $candidate }
+    }
+    return $null
+}
+
+function Ensure-YaziFileOne {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param()
+
+    $exe = Find-GitFileOne
+    $current = [Environment]::GetEnvironmentVariable('YAZI_FILE_ONE', 'User')
+    if (-not $current) { $current = $env:YAZI_FILE_ONE }
+
+    if ($current -and (Test-Path -LiteralPath $current -PathType Leaf)) {
+        Write-Host "[skip]   YAZI_FILE_ONE 已指向有效文件: $current（未改动）"
+        return
+    }
+    if (-not $exe) {
+        Write-Warning '未找到 Git for Windows 自带的 usr\bin\file.exe；yazi 的 MIME 检测将回退到扩展名。请安装 Git for Windows，或手动设置 YAZI_FILE_ONE。'
+        return
+    }
+
+    if ($PSCmdlet.ShouldProcess('YAZI_FILE_ONE', "设置为 $exe（User，持久化）")) {
+        [Environment]::SetEnvironmentVariable('YAZI_FILE_ONE', $exe, 'User')
+        $env:YAZI_FILE_ONE = $exe
+        Write-Host "[env]    YAZI_FILE_ONE = $exe (User)"
+    }
+}
+
 Write-Host "==> Repository: $Repo"
 
 New-Item -ItemType Directory -Path $configHome -Force | Out-Null
@@ -341,6 +383,9 @@ $tools = @(
 foreach ($tool in $tools) {
     Assert-ToolPath -Name $tool.Name -WingetId $tool.WingetId
 }
+
+Write-Host "`n==> yazi file(1)"
+Ensure-YaziFileOne
 
 Write-Host "`n==> 接下来"
 Write-Host "  新开 PowerShell 7 终端后运行 .\scripts\win11\verify.ps1"

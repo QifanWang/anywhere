@@ -173,6 +173,16 @@ foreach ($spec in @(
     Add-Result "wrapper $($spec.Name)" ([bool]$fn) $detail
 }
 
+Write-Host "`n==> yazi file(1)"
+$fileOne = [Environment]::GetEnvironmentVariable('YAZI_FILE_ONE', 'User')
+if (-not $fileOne) { $fileOne = $env:YAZI_FILE_ONE }
+if ($fileOne -and (Test-Path -LiteralPath $fileOne -PathType Leaf)) {
+    Add-Result "YAZI_FILE_ONE" $true $fileOne
+} else {
+    $detail = if ($fileOne) { "指向的文件不存在: $fileOne" } else { "未设置；yazi 只能靠扩展名兜底，mime 规则可能失效（重跑 bootstrap.ps1）" }
+    Add-Result "YAZI_FILE_ONE" $false $detail
+}
+
 Write-Host "`n==> Configs"
 $configHome = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
 Add-Result "XDG_CONFIG_HOME" $true $configHome

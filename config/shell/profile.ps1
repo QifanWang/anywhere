@@ -18,6 +18,11 @@ if (Test-Path -LiteralPath $ezaAliases) {
     . $ezaAliases
 }
 
+# --- fzf 候选源：用 fd 列文件（对齐 Unix env.sh，供 yazi 的 z 等使用） ---
+if (Get-Command fd -ErrorAction SilentlyContinue) {
+    $env:FZF_DEFAULT_COMMAND = 'fd --type f --type d --hidden --follow --exclude .git'
+}
+
 # --- PSReadLine：历史前缀搜索 + 菜单补全 + 插件增强的智能预测 ---
 # PowerShell 7 内置模块；CompletionPredictor（PSGallery）提供基于 AST 的补全预测，
 # 与历史预测合并为 HistoryAndPlugin；ListView 为 fish 风格多选下拉。
