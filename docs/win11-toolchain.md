@@ -152,7 +152,7 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 
 脚本无法覆盖的交互项，手动确认：
 
-- `rmux` 启动后按 `C-b ?` 查看键位；`C-b T` 可切换面板鼠标模式。
+- `rmux` 启动后按 `C-b ?` 查看键位；鼠标默认为 `on`（滚轮滚动各面板历史、拖拽调整分屏），按 `C-b T` 可临时切回终端原生选择。开多个 panel 后用滚轮或 `C-b PPage` 进入复制模式滚动历史，详见 `cheatsheet/rmux.md`。
 - `yazi` 启动后按 `~` 查看帮助，确认图标正常（Nerd Font 生效）；提示符应显示 oh-my-posh 的 git 分支与路径。
 - 在 yazi 里按 `g f` 应进入 fd 平铺视图（最多 3 层）；按 `g v` 应进入 vcs:// 虚拟视图列出 Git 变更文件；按 `g i` 应以前台方式拉起 lazygit（`q` 退回 yazi）。
 - `glow README.md` 应以渲染后的 Markdown 输出；在 yazi 里把光标移到 `.md` 文件，预览 pane 应显示 glow 渲染结果；按 `o` 应进入**全屏分页**的精读界面（底部有 `-- More --` 提示），`space` 翻页、`q` 退出回到 yazi，而不是把文本直接打印到终端。
@@ -178,3 +178,4 @@ Copy-Item "$repo\config\shell\profile.ps1"      "$HOME\.config\shell\profile.ps1
 12. **PSGallery 安装失败**：确认 PSGallery 已注册（`Get-PSRepository PSGallery`）；下载超时需按 §3.1 设置代理，或手动运行 §3.2 的两条 `Install-Module`。
 13. **yazi 的 MIME 规则不生效 / `.md` 预览或打开落到默认动作**：先确认 `YAZI_FILE_ONE` 已设置且指向存在的文件（`verify.ps1` 会检查）。yazi 用 `file(1)` 判定 MIME，Windows 上应是 Git for Windows 自带的 `C:\Program Files\Git\usr\bin\file.exe`；重跑 `bootstrap.ps1` 可自动设置，手动设置后需重开终端。不要用 scoop / choco 装的 `file`。
 14. **`g f` / `g i` / `g v` 在 win11 无反应**：确认 `keymap.toml` 中三条已去掉 `for = "unix"`（bootstrap 链接整个 `config/yazi/`，改后需重跑一次；已在 yazi 中则重开）。`g i` 需 lazygit 在 PATH，`g f` 需 fd，`g v` 需 git + `plugins/vcs-files.yazi`。`g i` 若报 shell 相关错误，把 `run` 改为 `shell --block cmd /c lazygit` 重试。
+15. **rmux 多 panel 无法滚轮 / 上下键滚动**：本仓库 `rmux.conf` 已默认 `mouse on`，确认运行中的 server 已加载配置（`rmux show-options -g mouse` 应为 `on`；刚改配置可用 `C-b r` 重载）。滚轮需在目标面板上操作；键盘滚动须按 `C-b PPage` 或 `C-b [` 进入复制模式后用 `↑/↓`/`j/k`/`PgUp/PgDn`，普通模式的裸 `↑/↓` 是 shell 命令历史、`C-b ↑/↓` 是切换面板。若想恢复终端原生双击选词，按 `C-b T` 关掉鼠标（再按一次切回）。
